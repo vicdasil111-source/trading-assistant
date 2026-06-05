@@ -6,8 +6,9 @@ venv/
 env/
 *.egg-info/
 
-# Données mises en cache (à ne pas versionner)
-data/
+# Données mises en cache (à ne pas versionner) — mais on garde data/samples/
+data/*
+!data/samples/
 
 # Secrets / config locale (clés API si un jour ajoutées)
 .env

@@ -21,11 +21,23 @@ logger = get_logger(__name__)
 
 _COLUMNS = ["timestamp", "open", "high", "low", "close", "volume"]
 
+# Données d'exemple réelles embarquées (versionnées dans git), utilisées en dernier
+# recours si le réseau ET le cache local échouent — utile sur un hébergement où
+# l'API Binance est bloquée. Le site déployé montre alors des données réelles,
+# simplement potentiellement un peu anciennes.
+SAMPLES_DIR = DATA_DIR / "samples"
+
 
 def _cache_path(symbol: str, timeframe: str) -> Path:
     """Chemin du fichier cache pour un couple symbole/timeframe."""
     safe = symbol.replace("/", "-")
     return DATA_DIR / f"{safe}_{timeframe}.csv"
+
+
+def _sample_path(symbol: str, timeframe: str) -> Path:
+    """Chemin du jeu de données d'exemple embarqué."""
+    safe = symbol.replace("/", "-")
+    return SAMPLES_DIR / f"{safe}_{timeframe}.csv"
 
 
 def _save_cache(df: pd.DataFrame, path: Path) -> None:
@@ -78,8 +90,12 @@ def fetch_ohlcv(
         if use_cache and path.exists():
             logger.info("Repli sur le cache local : %s", path)
             return _load_cache(path)
+        sample = _sample_path(symbol, timeframe)
+        if sample.exists():
+            logger.info("Repli sur les données d'exemple embarquées : %s", sample)
+            return _load_cache(sample)
         raise RuntimeError(
             f"Impossible de récupérer les données pour {symbol} ({timeframe}) "
-            f"et aucun cache disponible. Vérifie ta connexion internet et le "
-            f"nom du symbole (ex. 'BTC/USDT')."
+            f"et aucun cache ni exemple disponible. Vérifie ta connexion internet "
+            f"et le nom du symbole (ex. 'BTC/USDT')."
         ) from exc

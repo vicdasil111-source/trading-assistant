@@ -192,6 +192,27 @@ Puis ajoute-la au dictionnaire `AVAILABLE_STRATEGIES`.
 
 ---
 
+## 🌍 Publier le site (mise en ligne gratuite)
+
+Le plus simple pour une app Streamlit : **Streamlit Community Cloud** (gratuit). Il
+déploie directement depuis un dépôt GitHub et donne une URL publique `…streamlit.app`.
+
+1. **Mettre le code sur GitHub** (dépôt public ou privé) :
+   ```bash
+   git remote add origin https://github.com/<ton-pseudo>/trading-assistant.git
+   git push -u origin main
+   ```
+2. **Déployer** : aller sur <https://share.streamlit.io>, se connecter avec GitHub,
+   cliquer **Create app**, choisir le dépôt, mettre `dashboard.py` comme *Main file
+   path*, puis **Deploy**.
+3. C'est en ligne. Le déploiement se met à jour automatiquement à chaque `git push`.
+
+Notes :
+- `requirements.txt` est déjà prêt ; Streamlit Cloud installe les dépendances seul.
+- Si l'API Binance est bloquée sur l'hébergeur, le site se rabat automatiquement sur
+  les **données d'exemple embarquées** (`data/samples/`) : il fonctionne quand même.
+- Ne mets **jamais** de clés API dans le dépôt (le `.gitignore` protège déjà `.env`).
+
 ## ⚖️ Avertissement
 
 Projet éducatif. Ce logiciel est fourni « tel quel », sans garantie. Il ne constitue
