@@ -14,7 +14,10 @@ permet de les **tester** par backtesting et paper trading.
 ## ✨ Ce que fait l'outil
 
 - 📥 **Données de marché** crypto via [`ccxt`](https://github.com/ccxt/ccxt) (Binance, données publiques), avec cache local.
-- 📊 **Indicateurs** : RSI, SMA, EMA, MACD, Bandes de Bollinger, détection de tendance.
+- 📊 **Indicateurs** : RSI, SMA, EMA, MACD, Bollinger, **ATR**, **Stochastique**, **OBV**, tendance.
+- 🎛️ **Panneau d'options** : choix d'actif, intervalle, indicateurs réglables, affichage modulable.
+- 🌙☀️ **Thème clair / sombre** (bascule instantanée), sous-graphes RSI/MACD/Stochastique, volume.
+- ⬇️ **Exports CSV** (données + indicateurs, trades du backtest) et **glossaire** intégré.
 - 🧠 **4 stratégies** qui produisent des signaux : `rsi_sma`, `ema_cross`, `macd_cross`, `bollinger`.
 - ⏪ **Backtesting** sur l'historique, avec **frais de transaction**, **benchmark Buy & Hold**,
   win rate, profit factor, **ratio de Sharpe** et drawdown.

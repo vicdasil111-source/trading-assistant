@@ -97,6 +97,51 @@ def add_bollinger(
     return df
 
 
+def add_atr(df: pd.DataFrame, window: int = 14) -> pd.DataFrame:
+    """
+    ATR (Average True Range) : mesure de la volatilité.
+
+    Le "True Range" est la plus grande des trois amplitudes : haut-bas du jour,
+    |haut - clôture veille|, |bas - clôture veille|. L'ATR en est la moyenne mobile.
+    Utile pour dimensionner un stop-loss proportionnel à la volatilité.
+    """
+    prev_close = df["close"].shift(1)
+    tr = pd.concat([
+        df["high"] - df["low"],
+        (df["high"] - prev_close).abs(),
+        (df["low"] - prev_close).abs(),
+    ], axis=1).max(axis=1)
+    df["atr"] = tr.rolling(window=window).mean()
+    return df
+
+
+def add_stochastic(df: pd.DataFrame, k_window: int = 14, d_window: int = 3) -> pd.DataFrame:
+    """
+    Oscillateur stochastique (%K et %D), entre 0 et 100.
+
+    Situe la clôture dans la fourchette haut/bas récente. > 80 = suracheté,
+    < 20 = survendu. %D est la moyenne mobile de %K (ligne de signal).
+    """
+    bas = df["low"].rolling(window=k_window).min()
+    haut = df["high"].rolling(window=k_window).max()
+    ecart = (haut - bas).replace(0, pd.NA)
+    df["stoch_k"] = ((df["close"] - bas) / ecart * 100).astype(float)
+    df["stoch_d"] = df["stoch_k"].rolling(window=d_window).mean()
+    return df
+
+
+def add_obv(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    OBV (On-Balance Volume) : cumule le volume selon le sens du prix.
+
+    Le volume est ajouté les jours de hausse, retranché les jours de baisse.
+    Une divergence OBV / prix peut précéder un retournement.
+    """
+    direction = df["close"].diff().apply(lambda x: 1 if x > 0 else (-1 if x < 0 else 0))
+    df["obv"] = (direction * df["volume"]).cumsum()
+    return df
+
+
 def detect_trend(df: pd.DataFrame, short: int = 20, long: int = 50) -> str:
     """
     Détecte une tendance simple à partir de deux moyennes mobiles.
@@ -131,4 +176,7 @@ def add_all(df: pd.DataFrame, config=None) -> pd.DataFrame:
     add_ema(df, window=cfg.sma_short)
     add_macd(df)
     add_bollinger(df, window=cfg.bollinger_window, num_std=cfg.bollinger_std)
+    add_atr(df)
+    add_stochastic(df)
+    add_obv(df)
     return df
