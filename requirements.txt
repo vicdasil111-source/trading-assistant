@@ -1,0 +1,5 @@
+ccxt>=4.0.0        # récupération des données crypto (données publiques)
+pandas>=2.0.0      # manipulation de données
+numpy>=1.24.0      # calculs numériques
+streamlit>=1.30.0  # dashboard web
+pytest>=7.0.0      # tests
