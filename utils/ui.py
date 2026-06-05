@@ -196,7 +196,14 @@ def start_page(title: str, icon: str = "📈", layout: str = "wide") -> dict:
     """
     init_page(title, icon, layout)
     _theme_toggle()
-    return inject_theme()
+    palette = inject_theme()
+    # Import paresseux : account_ui importe utils.ui ; à ce stade ui est chargé.
+    try:
+        from utils import account_ui
+        account_ui.sidebar_account()
+    except Exception:  # ne jamais casser la page pour l'affichage du compte
+        pass
+    return palette
 
 
 # Compat : ancien nom utilisé par certaines pages.

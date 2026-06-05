@@ -18,6 +18,9 @@ permet de les **tester** par backtesting et paper trading.
 - 🎛️ **Panneau d'options** : choix d'actif, intervalle, indicateurs réglables, affichage modulable.
 - 🌙☀️ **Thème clair / sombre** (bascule instantanée), sous-graphes RSI/MACD/Stochastique, volume.
 - ⬇️ **Exports CSV** (données + indicateurs, trades du backtest) et **glossaire** intégré.
+- 👤 **Comptes utilisateurs** (inscription / connexion, mots de passe **hachés** PBKDF2, session
+  persistante par jeton) avec **watchlist** et préférences par utilisateur.
+- 🧮 **Outils de risque** (taille de position, risque/récompense) et **comparateur multi-actifs**.
 - 🧠 **4 stratégies** qui produisent des signaux : `rsi_sma`, `ema_cross`, `macd_cross`, `bollinger`.
 - ⏪ **Backtesting** sur l'historique, avec **frais de transaction**, **benchmark Buy & Hold**,
   win rate, profit factor, **ratio de Sharpe** et drawdown.
@@ -94,10 +97,14 @@ Un site **multi-pages** s'ouvre dans le navigateur, avec dans la barre latérale
 
 | Page | Ce qu'elle fait |
 |---|---|
-| 📈 **Analyse** (accueil) | Graphe en chandelles, indicateurs, backtest, comparaison |
+| 📈 **Analyse** (accueil) | Chandelles + volume + signaux, indicateurs réglables, backtest |
 | ⚙️ **Optimisation** | Le bot règle ses stratégies tout seul + détection du sur-apprentissage |
 | 🤖 **Pilote auto** | Portefeuille fictif autonome qui décide seul (état sauvegardé) |
 | 🧠 **Machine Learning** | Un modèle prédit la tendance, évalué honnêtement |
+| 👤 **Compte** | Inscription / connexion (mots de passe hachés, session persistante) |
+| ⭐ **Watchlist** | Liste de suivi personnelle (prix, RSI, tendance, signal) — nécessite un compte |
+| 🧮 **Outils** | Calculateur de taille de position et de ratio risque/récompense |
+| 📊 **Comparateur** | Performances de plusieurs actifs sur une même base 100 |
 
 ### Pilote automatique en boucle (CLI)
 
