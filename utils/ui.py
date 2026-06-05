@@ -102,6 +102,14 @@ a:hover { text-decoration: underline; }
 }
 [data-testid="stMetricDelta"] { font-variant-numeric: tabular-nums; font-size: 0.82rem; }
 
+/* Apparition douce des métriques (enrichit un état déjà visible). Léger stagger. */
+@keyframes ta-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+[data-testid="stMetric"] { animation: ta-rise 380ms var(--ease) both; }
+[data-testid="stColumn"]:nth-of-type(2) [data-testid="stMetric"] { animation-delay: 55ms; }
+[data-testid="stColumn"]:nth-of-type(3) [data-testid="stMetric"] { animation-delay: 110ms; }
+[data-testid="stColumn"]:nth-of-type(4) [data-testid="stMetric"] { animation-delay: 165ms; }
+[data-testid="stColumn"]:nth-of-type(5) [data-testid="stMetric"] { animation-delay: 220ms; }
+
 /* Boutons : primaire indigo (texte sombre), états complets. */
 .stButton > button, [data-testid="stBaseButton-primary"], [data-testid="stBaseButton-secondary"] {
   border-radius: var(--radius);

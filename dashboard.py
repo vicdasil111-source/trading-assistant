@@ -54,7 +54,7 @@ def charger(symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
 
 
 def graphe_chandelles(df: pd.DataFrame) -> go.Figure:
-    """Graphe en chandelles + moyennes mobiles + bandes de Bollinger (thème sombre)."""
+    """Graphe en chandelles + moyennes + Bollinger + signaux achat/vente (thème sombre)."""
     fig = go.Figure()
     fig.add_trace(go.Candlestick(
         x=df["timestamp"], open=df["open"], high=df["high"],
@@ -73,6 +73,25 @@ def graphe_chandelles(df: pd.DataFrame) -> go.Figure:
         fig.add_trace(go.Scatter(x=df["timestamp"], y=df["bb_lower"], name="Bollinger bas",
                                  line=dict(width=1, color=COLORS["muted"], dash="dot"),
                                  fill="tonexty", fillcolor="rgba(169,170,178,0.07)"))
+    # Signaux : on ne marque que les CHANGEMENTS d'état (points d'entrée), pas chaque
+    # bougie — c'est ce que le backtest exécute, et ça garde le graphe lisible.
+    if "signal" in df.columns:
+        sig = df["signal"]
+        prec = sig.shift(1)
+        achats = df[(sig == 1) & (prec != 1)]
+        ventes = df[(sig == -1) & (prec != -1)]
+        if not achats.empty:
+            fig.add_trace(go.Scatter(
+                x=achats["timestamp"], y=achats["low"] * 0.985, name="Achat", mode="markers",
+                marker=dict(symbol="triangle-up", size=11, color=COLORS["gain"],
+                            line=dict(width=1, color=COLORS["bg"])),
+                hovertemplate="Achat<br>%{x|%d %b %Y}<extra></extra>"))
+        if not ventes.empty:
+            fig.add_trace(go.Scatter(
+                x=ventes["timestamp"], y=ventes["high"] * 1.015, name="Vente", mode="markers",
+                marker=dict(symbol="triangle-down", size=11, color=COLORS["loss"],
+                            line=dict(width=1, color=COLORS["bg"])),
+                hovertemplate="Vente<br>%{x|%d %b %Y}<extra></extra>"))
     fig.update_layout(
         template="plotly_dark", height=500, xaxis_rangeslider_visible=False,
         margin=dict(l=0, r=0, t=10, b=0),
@@ -109,9 +128,9 @@ if lancer:
     for a in alertes:
         st.warning(a)
 
-    # --- Graphe en chandelles ---
-    st.subheader("Prix (chandelles), moyennes et Bollinger")
-    st.plotly_chart(graphe_chandelles(df), use_container_width=True)
+    # --- Graphe en chandelles (avec signaux achat/vente) ---
+    st.subheader("Prix (chandelles), moyennes et signaux")
+    st.plotly_chart(graphe_chandelles(df_sig), use_container_width=True)
 
     # --- RSI & MACD ---
     g1, g2 = st.columns(2)
