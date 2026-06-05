@@ -10,7 +10,20 @@ pour colorer les graphes Plotly).
 
 from __future__ import annotations
 
+import os
+
 import streamlit as st
+
+
+def _load_secrets_to_env() -> None:
+    """Recopie les secrets Streamlit (Supabase…) dans les variables d'environnement,
+    pour que core/ les lise sans dépendre de Streamlit."""
+    try:
+        for k in ("SUPABASE_URL", "SUPABASE_KEY"):
+            if k not in os.environ and k in st.secrets:
+                os.environ[k] = str(st.secrets[k])
+    except Exception:
+        pass  # pas de fichier secrets en local : on reste sur SQLite
 
 # Palettes (alignées sur DESIGN.md). Hex calculés depuis de l'OKLCH.
 DARK = {
@@ -194,6 +207,7 @@ def start_page(title: str, icon: str = "📈", layout: str = "wide") -> dict:
 
     Renvoie la palette active (à passer aux graphes Plotly).
     """
+    _load_secrets_to_env()
     init_page(title, icon, layout)
     _theme_toggle()
     palette = inject_theme()

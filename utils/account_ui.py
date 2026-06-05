@@ -85,7 +85,12 @@ def login_form() -> None:
         p = st.text_input("Mot de passe", type="password")
         ok = st.form_submit_button("Se connecter", type="primary", use_container_width=True)
     if ok:
-        if accounts.authenticate(u, p):
+        try:
+            valide = accounts.authenticate(u, p)
+        except Exception:
+            st.error("Le service de comptes est momentanément indisponible. Réessaie.")
+            return
+        if valide:
             do_login(u.strip())
             st.rerun()
         else:
@@ -108,6 +113,10 @@ def signup_form() -> None:
             accounts.create_user(u, p1, email=e)
         except ValueError as exc:
             st.error(str(exc))
+            return
+        except Exception:
+            st.error("Le service de comptes est momentanément indisponible. Réessaie "
+                     "plus tard.")
             return
         do_login(u.strip())
         st.rerun()

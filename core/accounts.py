@@ -26,10 +26,17 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+from core import supabase_store as sb
 from utils.config import DATA_DIR
 
 _ITERATIONS = 200_000
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _use_supabase(path: Path | None) -> bool:
+    """Supabase est utilisé quand aucun chemin SQLite explicite n'est donné
+    (les tests passent un chemin) ET que Supabase est configuré."""
+    return path is None and sb.enabled()
 
 
 def db_path() -> Path:
@@ -115,10 +122,19 @@ def create_user(username: str, password: str, email: str = "",
     if email and not _EMAIL_RE.match(email):
         raise ValueError("Adresse e-mail invalide.")
 
-    init_db(path)
     salt = secrets.token_hex(16)
     pwd_hash = _hash(password, salt)
     created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    row = {"username": username, "email": email, "salt": salt,
+           "pwd_hash": pwd_hash, "created_at": created}
+
+    if _use_supabase(path):
+        if sb.select("users", {"username": f"eq.{username}"}, "username"):
+            raise ValueError("Ce nom d'utilisateur est déjà pris.")
+        sb.insert("users", row)
+        return
+
+    init_db(path)
     try:
         with _connect(path) as conn:
             conn.execute(
@@ -132,10 +148,18 @@ def create_user(username: str, password: str, email: str = "",
 
 def authenticate(username: str, password: str, path: Path | None = None) -> bool:
     """Renvoie True si le couple identifiant / mot de passe est correct."""
+    username = username.strip()
+    if _use_supabase(path):
+        rows = sb.select("users", {"username": f"eq.{username}"}, "salt,pwd_hash")
+        if not rows:
+            return False
+        candidate = _hash(password, rows[0]["salt"])
+        return hmac.compare_digest(candidate, rows[0]["pwd_hash"])
+
     init_db(path)
     with _connect(path) as conn:
         row = conn.execute(
-            "SELECT salt, pwd_hash FROM users WHERE username = ?", (username.strip(),)
+            "SELECT salt, pwd_hash FROM users WHERE username = ?", (username,)
         ).fetchone()
     if row is None:
         return False
@@ -144,10 +168,13 @@ def authenticate(username: str, password: str, path: Path | None = None) -> bool
 
 
 def user_exists(username: str, path: Path | None = None) -> bool:
+    username = username.strip()
+    if _use_supabase(path):
+        return bool(sb.select("users", {"username": f"eq.{username}"}, "username"))
     init_db(path)
     with _connect(path) as conn:
         return conn.execute(
-            "SELECT 1 FROM users WHERE username = ?", (username.strip(),)
+            "SELECT 1 FROM users WHERE username = ?", (username,)
         ).fetchone() is not None
 
 
@@ -155,9 +182,12 @@ def user_exists(username: str, path: Path | None = None) -> bool:
 
 def create_session(username: str, path: Path | None = None) -> str:
     """Crée un jeton de session aléatoire pour l'utilisateur et le renvoie."""
-    init_db(path)
     token = secrets.token_urlsafe(24)
     created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    if _use_supabase(path):
+        sb.insert("sessions", {"token": token, "username": username, "created_at": created})
+        return token
+    init_db(path)
     with _connect(path) as conn:
         conn.execute("INSERT INTO sessions (token, username, created_at) VALUES (?, ?, ?)",
                      (token, username, created))
@@ -168,6 +198,9 @@ def session_user(token: str, path: Path | None = None) -> str | None:
     """Renvoie l'utilisateur associé à un jeton, ou None s'il est invalide."""
     if not token:
         return None
+    if _use_supabase(path):
+        rows = sb.select("sessions", {"token": f"eq.{token}"}, "username")
+        return rows[0]["username"] if rows else None
     init_db(path)
     with _connect(path) as conn:
         row = conn.execute("SELECT username FROM sessions WHERE token = ?", (token,)).fetchone()
@@ -177,6 +210,9 @@ def session_user(token: str, path: Path | None = None) -> str | None:
 def delete_session(token: str, path: Path | None = None) -> None:
     if not token:
         return
+    if _use_supabase(path):
+        sb.delete("sessions", {"token": f"eq.{token}"})
+        return
     init_db(path)
     with _connect(path) as conn:
         conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
@@ -185,24 +221,32 @@ def delete_session(token: str, path: Path | None = None) -> None:
 # --- Watchlist ---
 
 def add_watch(username: str, symbol: str, path: Path | None = None) -> None:
+    symbol = symbol.upper().strip()
+    if _use_supabase(path):
+        sb.upsert("watchlist", {"username": username, "symbol": symbol},
+                  on_conflict="username,symbol", merge=False)
+        return
     init_db(path)
     with _connect(path) as conn:
-        conn.execute(
-            "INSERT OR IGNORE INTO watchlist (username, symbol) VALUES (?, ?)",
-            (username, symbol.upper().strip()),
-        )
+        conn.execute("INSERT OR IGNORE INTO watchlist (username, symbol) VALUES (?, ?)",
+                     (username, symbol))
 
 
 def remove_watch(username: str, symbol: str, path: Path | None = None) -> None:
+    symbol = symbol.upper().strip()
+    if _use_supabase(path):
+        sb.delete("watchlist", {"username": f"eq.{username}", "symbol": f"eq.{symbol}"})
+        return
     init_db(path)
     with _connect(path) as conn:
-        conn.execute(
-            "DELETE FROM watchlist WHERE username = ? AND symbol = ?",
-            (username, symbol.upper().strip()),
-        )
+        conn.execute("DELETE FROM watchlist WHERE username = ? AND symbol = ?",
+                     (username, symbol))
 
 
 def get_watchlist(username: str, path: Path | None = None) -> list[str]:
+    if _use_supabase(path):
+        rows = sb.select("watchlist", {"username": f"eq.{username}"}, "symbol", order="symbol")
+        return [r["symbol"] for r in rows]
     init_db(path)
     with _connect(path) as conn:
         rows = conn.execute(
@@ -217,17 +261,26 @@ def add_holding(username: str, symbol: str, quantity: float, buy_price: float,
                 path: Path | None = None) -> None:
     if quantity <= 0 or buy_price <= 0:
         raise ValueError("Quantité et prix d'achat doivent être positifs.")
-    init_db(path)
+    symbol = symbol.upper().strip()
     created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    if _use_supabase(path):
+        sb.insert("holdings", {"username": username, "symbol": symbol,
+                               "quantity": float(quantity), "buy_price": float(buy_price),
+                               "added_at": created})
+        return
+    init_db(path)
     with _connect(path) as conn:
         conn.execute(
             "INSERT INTO holdings (username, symbol, quantity, buy_price, added_at) "
             "VALUES (?, ?, ?, ?, ?)",
-            (username, symbol.upper().strip(), float(quantity), float(buy_price), created),
+            (username, symbol, float(quantity), float(buy_price), created),
         )
 
 
 def get_holdings(username: str, path: Path | None = None) -> list[dict]:
+    if _use_supabase(path):
+        return sb.select("holdings", {"username": f"eq.{username}"},
+                         "id,symbol,quantity,buy_price", order="symbol")
     init_db(path)
     with _connect(path) as conn:
         rows = conn.execute(
@@ -238,6 +291,9 @@ def get_holdings(username: str, path: Path | None = None) -> list[dict]:
 
 
 def remove_holding(username: str, holding_id: int, path: Path | None = None) -> None:
+    if _use_supabase(path):
+        sb.delete("holdings", {"username": f"eq.{username}", "id": f"eq.{holding_id}"})
+        return
     init_db(path)
     with _connect(path) as conn:
         conn.execute("DELETE FROM holdings WHERE username = ? AND id = ?",
@@ -248,17 +304,25 @@ def remove_holding(username: str, holding_id: int, path: Path | None = None) -> 
 
 def add_alert(username: str, symbol: str, kind: str, threshold: float,
               path: Path | None = None) -> None:
-    init_db(path)
+    symbol = symbol.upper().strip()
     created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    if _use_supabase(path):
+        sb.insert("alerts", {"username": username, "symbol": symbol, "kind": kind,
+                             "threshold": float(threshold), "created_at": created})
+        return
+    init_db(path)
     with _connect(path) as conn:
         conn.execute(
             "INSERT INTO alerts (username, symbol, kind, threshold, created_at) "
             "VALUES (?, ?, ?, ?, ?)",
-            (username, symbol.upper().strip(), kind, float(threshold), created),
+            (username, symbol, kind, float(threshold), created),
         )
 
 
 def get_alerts(username: str, path: Path | None = None) -> list[dict]:
+    if _use_supabase(path):
+        return sb.select("alerts", {"username": f"eq.{username}"},
+                         "id,symbol,kind,threshold", order="symbol")
     init_db(path)
     with _connect(path) as conn:
         rows = conn.execute(
@@ -269,6 +333,9 @@ def get_alerts(username: str, path: Path | None = None) -> list[dict]:
 
 
 def remove_alert(username: str, alert_id: int, path: Path | None = None) -> None:
+    if _use_supabase(path):
+        sb.delete("alerts", {"username": f"eq.{username}", "id": f"eq.{alert_id}"})
+        return
     init_db(path)
     with _connect(path) as conn:
         conn.execute("DELETE FROM alerts WHERE username = ? AND id = ?",
@@ -278,6 +345,10 @@ def remove_alert(username: str, alert_id: int, path: Path | None = None) -> None
 # --- Préférences ---
 
 def set_pref(username: str, key: str, value: str, path: Path | None = None) -> None:
+    if _use_supabase(path):
+        sb.upsert("prefs", {"username": username, "key": key, "value": value},
+                  on_conflict="username,key", merge=True)
+        return
     init_db(path)
     with _connect(path) as conn:
         conn.execute(
@@ -288,6 +359,9 @@ def set_pref(username: str, key: str, value: str, path: Path | None = None) -> N
 
 
 def get_pref(username: str, key: str, default: str = "", path: Path | None = None) -> str:
+    if _use_supabase(path):
+        rows = sb.select("prefs", {"username": f"eq.{username}", "key": f"eq.{key}"}, "value")
+        return rows[0]["value"] if rows else default
     init_db(path)
     with _connect(path) as conn:
         row = conn.execute(
