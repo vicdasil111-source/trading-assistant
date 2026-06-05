@@ -91,10 +91,63 @@ class EmaCrossStrategy(Strategy):
         return df
 
 
+class MacdCrossStrategy(Strategy):
+    """
+    Stratégie MACD : on suit le croisement entre la ligne MACD et sa ligne de signal.
+
+    - ACHAT (+1) : la ligne MACD croise sa ligne de signal VERS LE HAUT
+                   (momentum qui devient positif).
+    - VENTE (-1) : elle croise VERS LE BAS.
+    """
+
+    name = "macd_cross"
+
+    def generate_signals(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        if "macd" not in df.columns or "macd_signal" not in df.columns:
+            indicators.add_macd(df)
+
+        au_dessus = df["macd"] > df["macd_signal"]
+        croise_haut = au_dessus & ~au_dessus.shift(1, fill_value=False)
+        croise_bas = ~au_dessus & au_dessus.shift(1, fill_value=False)
+
+        df["signal"] = 0
+        df.loc[croise_haut, "signal"] = 1
+        df.loc[croise_bas, "signal"] = -1
+        return df
+
+
+class BollingerStrategy(Strategy):
+    """
+    Stratégie de retour à la moyenne avec les bandes de Bollinger.
+
+    - ACHAT (+1) : le prix passe SOUS la bande basse (potentiellement survendu).
+    - VENTE (-1) : le prix repasse AU-DESSUS de la bande médiane (moyenne).
+    """
+
+    name = "bollinger"
+
+    def __init__(self, window: int = 20, num_std: float = 2.0):
+        self.window = window
+        self.num_std = num_std
+
+    def generate_signals(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        if "bb_lower" not in df.columns:
+            indicators.add_bollinger(df, window=self.window, num_std=self.num_std)
+
+        df["signal"] = 0
+        df.loc[df["close"] < df["bb_lower"], "signal"] = 1
+        df.loc[df["close"] > df["bb_mid"], "signal"] = -1
+        return df
+
+
 # Registre des stratégies disponibles, pour les sélectionner par leur nom.
 AVAILABLE_STRATEGIES = {
     RsiSmaStrategy.name: RsiSmaStrategy,
     EmaCrossStrategy.name: EmaCrossStrategy,
+    MacdCrossStrategy.name: MacdCrossStrategy,
+    BollingerStrategy.name: BollingerStrategy,
 }
 
 

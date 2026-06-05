@@ -15,11 +15,14 @@ permet de les **tester** par backtesting et paper trading.
 
 - 📥 **Données de marché** crypto via [`ccxt`](https://github.com/ccxt/ccxt) (Binance, données publiques), avec cache local.
 - 📊 **Indicateurs** : RSI, SMA, EMA, MACD, Bandes de Bollinger, détection de tendance.
-- 🧠 **Stratégies** qui produisent des signaux (`rsi_sma`, `ema_cross`).
-- ⏪ **Backtesting** sur l'historique (rendement, win rate, profit factor, drawdown).
+- 🧠 **4 stratégies** qui produisent des signaux : `rsi_sma`, `ema_cross`, `macd_cross`, `bollinger`.
+- ⏪ **Backtesting** sur l'historique, avec **frais de transaction**, **benchmark Buy & Hold**,
+  win rate, profit factor, **ratio de Sharpe** et drawdown.
+- ⚖️ **Comparaison** de toutes les stratégies d'un coup (`compare`).
 - 🧪 **Paper trading** : portefeuille fictif pour s'entraîner sans risque.
 - 🛡️ **Gestion du risque** : ratio risque/récompense, taille de position.
-- 🖥️ **Dashboard Streamlit** + **CLI**.
+- 🔔 **Alertes** (console, + Telegram optionnel).
+- 🖥️ **Dashboard Streamlit** (graphe en **chandelles**) + **CLI**.
 
 ---
 
@@ -49,18 +52,30 @@ pip install -r requirements.txt
 ### En ligne de commande (CLI)
 
 ```bash
-# Analyse rapide d'un actif (derniers indicateurs + dernier signal)
+# Analyse rapide d'un actif (derniers indicateurs + dernier signal + alertes)
 python main.py analyse --symbol BTC/USDT --timeframe 1d
 
-# Backtester une stratégie
-python main.py backtest --symbol ETH/USDT --strategy rsi_sma --capital 1000
+# Backtester une stratégie (avec 0,1 % de frais par transaction)
+python main.py backtest --symbol ETH/USDT --strategy rsi_sma --capital 1000 --fee 0.1
 
-# Stratégie de croisement de moyennes
-python main.py backtest --strategy ema_cross
+# Comparer TOUTES les stratégies sur le même actif
+python main.py compare --symbol BTC/USDT --fee 0.1
 ```
 
 Options principales : `--symbol`, `--timeframe` (`1m`,`1h`,`4h`,`1d`,`1w`),
-`--limit`, `--strategy` (`rsi_sma` ou `ema_cross`), `--capital`.
+`--limit`, `--strategy` (`rsi_sma`, `ema_cross`, `macd_cross`, `bollinger`),
+`--capital`, `--fee` (frais en %), `--notify` (envoi Telegram, voir plus bas).
+
+### 🔔 Alertes Telegram (optionnel)
+
+Par défaut, les alertes s'affichent dans la console. Pour les recevoir aussi sur
+Telegram, définis deux variables d'environnement (aucune clé n'est stockée dans le code) :
+
+```powershell
+$env:TELEGRAM_BOT_TOKEN = "ton_token"   # créé via @BotFather
+$env:TELEGRAM_CHAT_ID   = "ton_chat_id"
+python main.py analyse --symbol BTC/USDT --notify
+```
 
 ### Dashboard (navigateur)
 
@@ -85,7 +100,8 @@ trading-assistant/
 │   └── risk.py          # Risque/récompense, taille de position
 ├── utils/
 │   ├── config.py        # Paramètres centraux
-│   └── logger.py        # Journalisation
+│   ├── logger.py        # Journalisation
+│   └── notifications.py # Alertes (console + Telegram optionnel)
 ├── tests/               # Tests (pytest)
 ├── data/                # Cache local (créé automatiquement)
 ├── dashboard.py         # Interface Streamlit

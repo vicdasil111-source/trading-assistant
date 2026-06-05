@@ -65,3 +65,33 @@ def test_equity_curve_meme_longueur_que_donnees():
     df = _df([10, 11, 12, 13], [1, 0, -1, 0])
     res = backtest(df, initial_capital=100)
     assert len(res.equity_curve) == len(df)
+
+
+def test_frais_reduisent_le_gain():
+    # Même trade gagnant, mais avec des frais : le résultat doit être plus faible.
+    df = _df([10, 20], [1, -1])
+    sans_frais = backtest(df, initial_capital=100, fee_pct=0.0)
+    avec_frais = backtest(df, initial_capital=100, fee_pct=1.0)
+    assert avec_frais.final_equity < sans_frais.final_equity
+    assert avec_frais.total_fees > 0
+
+
+def test_buy_hold_benchmark():
+    # Prix passe de 10 à 30 -> Buy & Hold = +200 %, peu importe les signaux.
+    df = _df([10, 20, 30], [0, 0, 0])
+    res = backtest(df, initial_capital=100)
+    assert res.buy_hold_return_pct == pytest.approx(200.0)
+
+
+def test_beats_buy_hold_est_faux_si_on_ne_trade_pas():
+    # Sans trade, on fait 0 % alors que Buy & Hold monte -> on ne le bat pas.
+    df = _df([10, 20, 30], [0, 0, 0])
+    res = backtest(df, initial_capital=100)
+    assert res.beats_buy_hold is False
+
+
+def test_sharpe_nul_si_equity_plate():
+    # Aucun trade, prix constant -> équité plate -> Sharpe = 0.
+    df = _df([10, 10, 10, 10], [0, 0, 0, 0])
+    res = backtest(df, initial_capital=100)
+    assert res.sharpe_ratio == pytest.approx(0.0)

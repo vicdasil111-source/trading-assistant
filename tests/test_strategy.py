@@ -2,7 +2,14 @@
 
 import pandas as pd
 
-from core.strategy import EmaCrossStrategy, RsiSmaStrategy, get_strategy
+from core.strategy import (
+    AVAILABLE_STRATEGIES,
+    BollingerStrategy,
+    EmaCrossStrategy,
+    MacdCrossStrategy,
+    RsiSmaStrategy,
+    get_strategy,
+)
 from utils.config import Config
 
 
@@ -55,3 +62,28 @@ def test_config_personnalisee_change_les_seuils():
     df = pd.DataFrame({"close": list(range(1, 60))})
     out = RsiSmaStrategy(config=cfg).generate_signals(df)
     assert set(out["signal"].unique()).issubset({-1, 0, 1})
+
+
+def test_macd_cross_detecte_un_croisement():
+    # Prix qui baissent puis remontent -> le MACD recroise sa ligne de signal.
+    prices = list(range(60, 0, -1)) + list(range(0, 90))
+    df = pd.DataFrame({"close": prices})
+    out = MacdCrossStrategy().generate_signals(df)
+    assert (out["signal"] == 1).any()
+    assert set(out["signal"].unique()).issubset({-1, 0, 1})
+
+
+def test_bollinger_genere_achat_sur_chute_brutale():
+    # Une chute soudaine fait passer le prix sous la bande basse -> achat.
+    prices = [100] * 25 + [60]
+    df = pd.DataFrame({"close": prices})
+    out = BollingerStrategy(window=20).generate_signals(df)
+    assert (out["signal"] == 1).any()
+
+
+def test_toutes_les_strategies_produisent_des_signaux_valides():
+    df = pd.DataFrame({"close": [100 + (i % 11) for i in range(150)]})
+    for name in AVAILABLE_STRATEGIES:
+        out = get_strategy(name).generate_signals(df)
+        assert "signal" in out.columns
+        assert set(out["signal"].unique()).issubset({-1, 0, 1})
