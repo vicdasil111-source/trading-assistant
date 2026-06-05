@@ -81,6 +81,16 @@ def test_bollinger_genere_achat_sur_chute_brutale():
     assert (out["signal"] == 1).any()
 
 
+def test_breakout_achat_sur_cassure_haussiere():
+    # Prix stable puis cassure nette au-dessus du plus haut récent -> achat.
+    prices = [100] * 25 + [130]
+    df = pd.DataFrame({"close": prices})
+    from core.strategy import BreakoutStrategy
+    out = BreakoutStrategy(window=20).generate_signals(df)
+    assert out["signal"].iloc[-1] == 1
+    assert set(out["signal"].unique()).issubset({-1, 0, 1})
+
+
 def test_toutes_les_strategies_produisent_des_signaux_valides():
     df = pd.DataFrame({"close": [100 + (i % 11) for i in range(150)]})
     for name in AVAILABLE_STRATEGIES:

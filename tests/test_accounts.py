@@ -76,6 +76,34 @@ def test_session_jeton_invalide(db):
     assert accounts.session_user("", path=db) is None
 
 
+def test_holdings_crud(db):
+    accounts.create_user("hugo", "azerty12", path=db)
+    accounts.add_holding("hugo", "btc/usdt", 0.5, 60000, path=db)
+    accounts.add_holding("hugo", "ETH/USDT", 2, 3000, path=db)
+    h = accounts.get_holdings("hugo", path=db)
+    assert len(h) == 2
+    assert h[0]["symbol"] == "BTC/USDT" and h[0]["quantity"] == 0.5
+    accounts.remove_holding("hugo", h[0]["id"], path=db)
+    assert len(accounts.get_holdings("hugo", path=db)) == 1
+
+
+def test_holding_invalide(db):
+    accounts.create_user("ines", "azerty12", path=db)
+    with pytest.raises(ValueError):
+        accounts.add_holding("ines", "BTC/USDT", -1, 100, path=db)
+    with pytest.raises(ValueError):
+        accounts.add_holding("ines", "BTC/USDT", 1, 0, path=db)
+
+
+def test_alerts_crud(db):
+    accounts.create_user("jade", "azerty12", path=db)
+    accounts.add_alert("jade", "BTC/USDT", "price_above", 70000, path=db)
+    a = accounts.get_alerts("jade", path=db)
+    assert len(a) == 1 and a[0]["kind"] == "price_above" and a[0]["threshold"] == 70000
+    accounts.remove_alert("jade", a[0]["id"], path=db)
+    assert accounts.get_alerts("jade", path=db) == []
+
+
 def test_hash_deterministe_avec_sel():
     h1 = accounts._hash("abc", "00ff")
     h2 = accounts._hash("abc", "00ff")

@@ -11,7 +11,12 @@ import streamlit as st
 
 from core.market_data import fetch_ohlcv
 from core.optimizer import optimize_strategy
-from core.strategy import BollingerStrategy, EmaCrossStrategy, RsiSmaStrategy
+from core.strategy import (
+    BollingerStrategy,
+    BreakoutStrategy,
+    EmaCrossStrategy,
+    RsiSmaStrategy,
+)
 from utils.ui import callout, page_header, setup_page
 
 setup_page("Optimisation", icon="⚙️")
@@ -36,6 +41,9 @@ GRILLES = {
         "rsi_oversold": [20, 30, 40],
         "rsi_overbought": [60, 70, 80],
         "sma_long": [50, 100],
+    }),
+    "breakout": (BreakoutStrategy, {
+        "window": [10, 20, 30, 50],
     }),
 }
 

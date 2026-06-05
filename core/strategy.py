@@ -155,12 +155,39 @@ class BollingerStrategy(Strategy):
         return df
 
 
+class BreakoutStrategy(Strategy):
+    """
+    Stratégie de cassure (breakout).
+
+    - ACHAT (+1) : le prix dépasse le plus haut des `window` dernières bougies.
+    - VENTE (-1) : le prix casse sous le plus bas des `window` dernières bougies.
+
+    On compare au plus haut/bas PRÉCÉDENT (décalé d'une bougie) pour ne pas
+    « tricher » avec l'information du jour même.
+    """
+
+    name = "breakout"
+
+    def __init__(self, window: int = 20):
+        self.window = window
+
+    def generate_signals(self, df: pd.DataFrame) -> pd.DataFrame:
+        df = df.copy()
+        plus_haut = df["close"].rolling(self.window).max().shift(1)
+        plus_bas = df["close"].rolling(self.window).min().shift(1)
+        df["signal"] = 0
+        df.loc[df["close"] > plus_haut, "signal"] = 1
+        df.loc[df["close"] < plus_bas, "signal"] = -1
+        return df
+
+
 # Registre des stratégies disponibles, pour les sélectionner par leur nom.
 AVAILABLE_STRATEGIES = {
     RsiSmaStrategy.name: RsiSmaStrategy,
     EmaCrossStrategy.name: EmaCrossStrategy,
     MacdCrossStrategy.name: MacdCrossStrategy,
     BollingerStrategy.name: BollingerStrategy,
+    BreakoutStrategy.name: BreakoutStrategy,
 }
 
 

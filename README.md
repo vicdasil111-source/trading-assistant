@@ -21,7 +21,8 @@ permet de les **tester** par backtesting et paper trading.
 - 👤 **Comptes utilisateurs** (inscription / connexion, mots de passe **hachés** PBKDF2, session
   persistante par jeton) avec **watchlist** et préférences par utilisateur.
 - 🧮 **Outils de risque** (taille de position, risque/récompense) et **comparateur multi-actifs**.
-- 🧠 **4 stratégies** qui produisent des signaux : `rsi_sma`, `ema_cross`, `macd_cross`, `bollinger`.
+- 🧠 **5 stratégies** : `rsi_sma`, `ema_cross`, `macd_cross`, `bollinger`, `breakout`.
+- 💼 **Portefeuille** manuel (valeur + P&L en direct) et 🔔 **alertes** prix/RSI, par compte.
 - ⏪ **Backtesting** sur l'historique, avec **frais de transaction**, **benchmark Buy & Hold**,
   win rate, profit factor, **ratio de Sharpe** et drawdown.
 - ⚖️ **Comparaison** de toutes les stratégies d'un coup (`compare`).
@@ -105,6 +106,8 @@ Un site **multi-pages** s'ouvre dans le navigateur, avec dans la barre latérale
 | ⭐ **Watchlist** | Liste de suivi personnelle (prix, RSI, tendance, signal) — nécessite un compte |
 | 🧮 **Outils** | Calculateur de taille de position et de ratio risque/récompense |
 | 📊 **Comparateur** | Performances de plusieurs actifs sur une même base 100 |
+| 💼 **Portefeuille** | Suivi manuel de tes positions, valeur et P&L en direct — nécessite un compte |
+| 🔔 **Alertes** | Conditions prix / RSI par actif, état déclenché en direct — nécessite un compte |
 
 ### Pilote automatique en boucle (CLI)
 

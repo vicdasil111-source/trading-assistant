@@ -74,6 +74,22 @@ def init_db(path: Path | None = None) -> None:
                 username   TEXT NOT NULL,
                 created_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS holdings (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                username  TEXT NOT NULL,
+                symbol    TEXT NOT NULL,
+                quantity  REAL NOT NULL,
+                buy_price REAL NOT NULL,
+                added_at  TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS alerts (
+                id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                username  TEXT NOT NULL,
+                symbol    TEXT NOT NULL,
+                kind      TEXT NOT NULL,
+                threshold REAL NOT NULL,
+                created_at TEXT NOT NULL
+            );
             """
         )
 
@@ -193,6 +209,70 @@ def get_watchlist(username: str, path: Path | None = None) -> list[str]:
             "SELECT symbol FROM watchlist WHERE username = ? ORDER BY symbol", (username,)
         ).fetchall()
     return [r["symbol"] for r in rows]
+
+
+# --- Portefeuille manuel (holdings) ---
+
+def add_holding(username: str, symbol: str, quantity: float, buy_price: float,
+                path: Path | None = None) -> None:
+    if quantity <= 0 or buy_price <= 0:
+        raise ValueError("Quantité et prix d'achat doivent être positifs.")
+    init_db(path)
+    created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with _connect(path) as conn:
+        conn.execute(
+            "INSERT INTO holdings (username, symbol, quantity, buy_price, added_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (username, symbol.upper().strip(), float(quantity), float(buy_price), created),
+        )
+
+
+def get_holdings(username: str, path: Path | None = None) -> list[dict]:
+    init_db(path)
+    with _connect(path) as conn:
+        rows = conn.execute(
+            "SELECT id, symbol, quantity, buy_price FROM holdings WHERE username = ? "
+            "ORDER BY symbol", (username,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_holding(username: str, holding_id: int, path: Path | None = None) -> None:
+    init_db(path)
+    with _connect(path) as conn:
+        conn.execute("DELETE FROM holdings WHERE username = ? AND id = ?",
+                     (username, holding_id))
+
+
+# --- Alertes de prix / RSI ---
+
+def add_alert(username: str, symbol: str, kind: str, threshold: float,
+              path: Path | None = None) -> None:
+    init_db(path)
+    created = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    with _connect(path) as conn:
+        conn.execute(
+            "INSERT INTO alerts (username, symbol, kind, threshold, created_at) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (username, symbol.upper().strip(), kind, float(threshold), created),
+        )
+
+
+def get_alerts(username: str, path: Path | None = None) -> list[dict]:
+    init_db(path)
+    with _connect(path) as conn:
+        rows = conn.execute(
+            "SELECT id, symbol, kind, threshold FROM alerts WHERE username = ? "
+            "ORDER BY symbol", (username,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def remove_alert(username: str, alert_id: int, path: Path | None = None) -> None:
+    init_db(path)
+    with _connect(path) as conn:
+        conn.execute("DELETE FROM alerts WHERE username = ? AND id = ?",
+                     (username, alert_id))
 
 
 # --- Préférences ---
