@@ -39,22 +39,35 @@ class RsiSmaStrategy(Strategy):
 
     name = "rsi_sma"
 
-    def __init__(self, config: Config | None = None):
-        self.cfg = config or default_config
+    def __init__(
+        self,
+        config: Config | None = None,
+        rsi_window: int | None = None,
+        rsi_oversold: float | None = None,
+        rsi_overbought: float | None = None,
+        sma_long: int | None = None,
+    ):
+        # Les paramètres explicites priment ; sinon on prend ceux de la config.
+        # (Permet à l'optimiseur d'essayer plein de réglages.)
+        cfg = config or default_config
+        self.rsi_window = rsi_window if rsi_window is not None else cfg.rsi_window
+        self.rsi_oversold = rsi_oversold if rsi_oversold is not None else cfg.rsi_oversold
+        self.rsi_overbought = rsi_overbought if rsi_overbought is not None else cfg.rsi_overbought
+        self.sma_long = sma_long if sma_long is not None else cfg.sma_long
 
     def generate_signals(self, df: pd.DataFrame) -> pd.DataFrame:
         df = df.copy()
 
         # Calcule les indicateurs nécessaires s'ils ne sont pas déjà là.
         if "rsi" not in df.columns:
-            indicators.add_rsi(df, window=self.cfg.rsi_window)
-        sma_col = f"sma_{self.cfg.sma_long}"
+            indicators.add_rsi(df, window=self.rsi_window)
+        sma_col = f"sma_{self.sma_long}"
         if sma_col not in df.columns:
-            indicators.add_sma(df, window=self.cfg.sma_long)
+            indicators.add_sma(df, window=self.sma_long)
 
         df["signal"] = 0
-        achat = (df["rsi"] < self.cfg.rsi_oversold) & (df["close"] > df[sma_col])
-        vente = df["rsi"] > self.cfg.rsi_overbought
+        achat = (df["rsi"] < self.rsi_oversold) & (df["close"] > df[sma_col])
+        vente = df["rsi"] > self.rsi_overbought
         df.loc[achat, "signal"] = 1
         df.loc[vente, "signal"] = -1
         return df

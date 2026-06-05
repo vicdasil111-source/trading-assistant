@@ -22,7 +22,11 @@ permet de les **tester** par backtesting et paper trading.
 - 🧪 **Paper trading** : portefeuille fictif pour s'entraîner sans risque.
 - 🛡️ **Gestion du risque** : ratio risque/récompense, taille de position.
 - 🔔 **Alertes** (console, + Telegram optionnel).
-- 🖥️ **Dashboard Streamlit** (graphe en **chandelles**) + **CLI**.
+- ⚙️ **Auto-optimisation** des stratégies, avec détection du **sur-apprentissage**.
+- 🤖 **Pilote automatique** : portefeuille fictif autonome qui décide seul.
+- 🧠 **Machine Learning** : prédiction de tendance (scikit-learn), évaluée honnêtement.
+- 🧪 **Testnet Binance** (argent fictif) pour apprendre l'exécution sans risque.
+- 🖥️ **Site multi-pages Streamlit** (graphe en **chandelles**) + **CLI**.
 
 ---
 
@@ -77,13 +81,41 @@ $env:TELEGRAM_CHAT_ID   = "ton_chat_id"
 python main.py analyse --symbol BTC/USDT --notify
 ```
 
-### Dashboard (navigateur)
+### Le site (navigateur)
 
 ```bash
 streamlit run dashboard.py
 ```
 
-Puis choisis un actif et une stratégie dans la barre latérale et clique **Analyser**.
+Un site **multi-pages** s'ouvre dans le navigateur, avec dans la barre latérale :
+
+| Page | Ce qu'elle fait |
+|---|---|
+| 📈 **Analyse** (accueil) | Graphe en chandelles, indicateurs, backtest, comparaison |
+| ⚙️ **Optimisation** | Le bot règle ses stratégies tout seul + détection du sur-apprentissage |
+| 🤖 **Pilote auto** | Portefeuille fictif autonome qui décide seul (état sauvegardé) |
+| 🧠 **Machine Learning** | Un modèle prédit la tendance, évalué honnêtement |
+
+### Pilote automatique en boucle (CLI)
+
+```bash
+python autopilot_runner.py --symbol BTC/USDT --timeframe 1h --strategy rsi_sma
+python autopilot_runner.py --once   # un seul pas
+```
+
+Le pilote tourne en simulation (argent fictif). `Ctrl+C` pour arrêter ; l'état est sauvegardé.
+
+### Exécution sur testnet (apprentissage, argent fictif)
+
+L'exécution d'ordres réels **autonome n'est pas supportée** (trop risqué). Pour apprendre
+l'exécution sans risque, le module `core/execution.py` parle au **testnet Binance**
+(argent fictif). Tout est en `dry_run` par défaut. Clés gratuites sur
+<https://testnet.binance.vision/> :
+
+```powershell
+$env:BINANCE_TESTNET_API_KEY = "..."
+$env:BINANCE_TESTNET_SECRET  = "..."
+```
 
 ---
 
@@ -97,15 +129,21 @@ trading-assistant/
 │   ├── strategy.py      # Stratégies -> signaux (+1/0/-1)
 │   ├── backtest.py      # Backtest + métriques
 │   ├── paper_trading.py # Portefeuille fictif
-│   └── risk.py          # Risque/récompense, taille de position
+│   ├── risk.py          # Risque/récompense, taille de position
+│   ├── optimizer.py     # Auto-optimisation (train/test, anti sur-apprentissage)
+│   ├── ml_strategy.py   # Stratégie Machine Learning (scikit-learn)
+│   ├── autopilot.py     # Pilote automatique (paper trading persistant)
+│   └── execution.py     # Exécution testnet Binance (argent fictif, garde-fous)
 ├── utils/
 │   ├── config.py        # Paramètres centraux
 │   ├── logger.py        # Journalisation
 │   └── notifications.py # Alertes (console + Telegram optionnel)
+├── pages/               # Pages du site (Optimisation, Pilote auto, ML)
 ├── tests/               # Tests (pytest)
-├── data/                # Cache local (créé automatiquement)
-├── dashboard.py         # Interface Streamlit
-├── main.py              # CLI
+├── data/                # Cache + état du pilote (créé automatiquement)
+├── dashboard.py         # Site Streamlit (page d'accueil : Analyse)
+├── autopilot_runner.py  # Pilote automatique en boucle (CLI)
+├── main.py              # CLI (analyse, backtest, compare)
 └── requirements.txt
 ```
 

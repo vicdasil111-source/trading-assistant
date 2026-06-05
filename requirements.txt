@@ -3,4 +3,5 @@ pandas>=2.0.0      # manipulation de données
 numpy>=1.24.0      # calculs numériques
 streamlit>=1.30.0  # dashboard web
 plotly>=5.18.0     # graphes en chandelles (dashboard)
+scikit-learn>=1.3.0 # machine learning (prédiction)
 pytest>=7.0.0      # tests

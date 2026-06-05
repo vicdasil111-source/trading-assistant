@@ -26,6 +26,9 @@ st.set_page_config(page_title="Trading Assistant", page_icon="📈", layout="wid
 st.title("📈 Trading Assistant")
 st.caption("Analyse crypto, backtesting et paper trading — **sans argent réel**. "
            "Ceci n'est pas un conseil financier.")
+st.info("🧭 Autres pages dans la barre latérale : **⚙️ Optimisation** (le bot règle "
+        "ses stratégies seul), **🤖 Pilote auto** (portefeuille fictif autonome), "
+        "**🧠 Machine Learning** (prédiction).")
 
 cfg = default_config
 
