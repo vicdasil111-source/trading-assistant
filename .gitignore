@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Données mises en cache (à ne pas versionner)
+data/
+
+# Secrets / config locale (clés API si un jour ajoutées)
+.env
+config.local.py
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
