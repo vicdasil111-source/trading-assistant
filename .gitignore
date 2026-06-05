@@ -16,6 +16,9 @@ config.local.py
 # Logs
 *.log
 
+# Config locale de l'aperçu (chemins absolus, spécifique à la machine)
+.claude/
+
 # OS / IDE
 .DS_Store
 .vscode/

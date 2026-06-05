@@ -1,0 +1,13 @@
+# Thème du Trading Assistant — voir DESIGN.md pour la justification des couleurs.
+[theme]
+base = "dark"
+primaryColor = "#787cf0"              # indigo de marque (actions, sélection, liens)
+backgroundColor = "#0f0f13"           # fond app
+secondaryBackgroundColor = "#18191f"  # panneaux, sidebar, cartes
+textColor = "#f1f1f4"                 # texte principal
+borderColor = "#31323a"               # contours
+baseRadius = "0.6rem"
+font = "sans-serif"
+
+[server]
+headless = true

@@ -9,15 +9,20 @@ import streamlit as st
 
 from core.market_data import fetch_ohlcv
 from core.ml_strategy import evaluate_ml
+from utils.ui import callout, page_header, setup_page
 
-st.set_page_config(page_title="Machine Learning", page_icon="🧠", layout="wide")
-st.title("🧠 Prédiction par Machine Learning")
-st.caption("Un modèle apprend à prédire la prochaine bougie. On l'évalue sur des "
-           "données **jamais vues** : c'est la seule mesure honnête.")
+setup_page("Machine Learning", icon="🧠")
+page_header(
+    "Prédiction par Machine Learning",
+    "Un modèle apprend à prédire la prochaine bougie. On l'évalue sur des données "
+    "jamais vues : la seule mesure honnête.",
+    icon="🧠",
+)
 
-st.warning("Prédire les marchés est très difficile. Une précision proche de **50 %** = "
-           "« pas mieux qu'un tirage à pile ou face ». C'est souvent le résultat, et "
-           "c'est une vraie leçon : méfie-toi des promesses d'IA qui « bat le marché ».")
+callout("Prédire les marchés est très difficile. Une précision proche de <b>50 %</b> "
+        "= « pas mieux qu'un tirage à pile ou face ». C'est souvent le résultat, et "
+        "c'est une vraie leçon : méfie-toi des promesses d'IA qui « bat le marché ».",
+        tone="warn")
 
 with st.sidebar:
     st.header("Paramètres")
@@ -52,13 +57,15 @@ if lancer:
               f"B&H : {ev.buy_hold_test_pct:+.1f} %")
 
     if ev.test_accuracy < 0.55:
-        st.error("🎲 Le modèle ne fait pas significativement mieux que le hasard sur "
-                 "les données de test. Normal et instructif : prédire le prix est très dur.")
+        callout("Le modèle ne fait pas significativement mieux que le hasard sur les "
+                "données de test. Normal et instructif : prédire le prix est très dur.",
+                tone="danger", icon="🎲")
     else:
-        st.success("Le modèle dépasse un peu le hasard sur le test — à confirmer sur "
-                   "d'autres périodes avant de s'emballer.")
+        callout("Le modèle dépasse un peu le hasard sur le test — à confirmer sur "
+                "d'autres périodes avant de s'emballer.", tone="gain")
 
     st.code(ev.summary(), language=None)
     st.caption(f"Échantillons : {ev.n_train} pour l'entraînement, {ev.n_test} pour le test.")
 else:
-    st.info("👈 Choisis un modèle et clique **Entraîner et évaluer**.")
+    callout("Choisis un modèle dans la barre latérale, puis clique "
+            "<b>Entraîner et évaluer</b>.", tone="info", icon="👈")

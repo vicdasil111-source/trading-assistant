@@ -10,11 +10,15 @@ import streamlit as st
 
 from core.autopilot import DEFAULT_STATE_PATH, Autopilot
 from core.strategy import AVAILABLE_STRATEGIES
+from utils.ui import callout, page_header, setup_page
 
-st.set_page_config(page_title="Pilote auto", page_icon="🤖", layout="wide")
-st.title("🤖 Pilote automatique (simulation)")
-st.caption("Un portefeuille **fictif** qui décide tout seul à chaque bougie. "
-           "Son état est sauvegardé entre les sessions. **Aucun argent réel.**")
+setup_page("Pilote auto", icon="🤖")
+page_header(
+    "Pilote automatique",
+    "Un portefeuille fictif qui décide tout seul à chaque bougie. Son état est "
+    "sauvegardé entre les sessions. Aucun argent réel.",
+    icon="🤖",
+)
 
 with st.sidebar:
     st.header("Configuration")
@@ -63,8 +67,9 @@ if bot.state.history:
     with st.expander("Voir le journal détaillé"):
         st.dataframe(hist[::-1], use_container_width=True)
 else:
-    st.info("Clique sur **Avancer** pour démarrer : le pilote ingérera l'historique "
-            "puis suivra le marché.")
+    callout("Clique sur <b>Avancer</b> pour démarrer : le pilote ingérera "
+            "l'historique puis suivra le marché.", tone="info", icon="▶️")
 
-st.info("📌 Tout est simulé. Le pilote ne passe aucun ordre réel. Pour une vraie "
-        "autonomie temps réel, on lancerait ce pas en boucle (voir le CLI : `python autopilot_runner.py`).")
+callout("Tout est simulé : le pilote ne passe aucun ordre réel. Pour une vraie "
+        "autonomie temps réel, on lance ce pas en boucle "
+        "(CLI : <code>python autopilot_runner.py</code>).", tone="info", icon="📌")

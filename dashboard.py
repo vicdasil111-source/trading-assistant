@@ -20,15 +20,18 @@ from core.market_data import fetch_ohlcv
 from core.strategy import AVAILABLE_STRATEGIES, get_strategy
 from utils import notifications
 from utils.config import default_config
+from utils.ui import COLORS, callout, page_header, setup_page
 
-st.set_page_config(page_title="Trading Assistant", page_icon="📈", layout="wide")
-
-st.title("📈 Trading Assistant")
-st.caption("Analyse crypto, backtesting et paper trading — **sans argent réel**. "
-           "Ceci n'est pas un conseil financier.")
-st.info("🧭 Autres pages dans la barre latérale : **⚙️ Optimisation** (le bot règle "
-        "ses stratégies seul), **🤖 Pilote auto** (portefeuille fictif autonome), "
-        "**🧠 Machine Learning** (prédiction).")
+setup_page("Analyse", icon="📈")
+page_header(
+    "Analyse du marché",
+    "Indicateurs, signaux et backtest sur données réelles — sans argent réel. "
+    "Ceci n'est pas un conseil financier.",
+    icon="📈",
+)
+callout("Dans la barre latérale : <b>Optimisation</b> (le bot règle ses stratégies "
+        "seul), <b>Pilote auto</b> (portefeuille fictif autonome), <b>Machine "
+        "Learning</b> (prédiction).", tone="info", icon="🧭")
 
 cfg = default_config
 
@@ -51,25 +54,33 @@ def charger(symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
 
 
 def graphe_chandelles(df: pd.DataFrame) -> go.Figure:
-    """Graphe en chandelles + moyennes mobiles + bandes de Bollinger."""
+    """Graphe en chandelles + moyennes mobiles + bandes de Bollinger (thème sombre)."""
     fig = go.Figure()
     fig.add_trace(go.Candlestick(
         x=df["timestamp"], open=df["open"], high=df["high"],
         low=df["low"], close=df["close"], name="Prix",
+        increasing_line_color=COLORS["gain"], increasing_fillcolor=COLORS["gain"],
+        decreasing_line_color=COLORS["loss"], decreasing_fillcolor=COLORS["loss"],
     ))
-    for col, couleur in [(f"sma_{cfg.sma_short}", "orange"),
-                         (f"sma_{cfg.sma_long}", "blue")]:
+    for col, couleur in [(f"sma_{cfg.sma_short}", COLORS["warn"]),
+                         (f"sma_{cfg.sma_long}", COLORS["primary"])]:
         if col in df.columns:
             fig.add_trace(go.Scatter(x=df["timestamp"], y=df[col], name=col,
-                                     line=dict(width=1, color=couleur)))
+                                     line=dict(width=1.4, color=couleur)))
     if {"bb_upper", "bb_lower"}.issubset(df.columns):
         fig.add_trace(go.Scatter(x=df["timestamp"], y=df["bb_upper"], name="Bollinger haut",
-                                 line=dict(width=1, color="gray", dash="dot")))
+                                 line=dict(width=1, color=COLORS["muted"], dash="dot")))
         fig.add_trace(go.Scatter(x=df["timestamp"], y=df["bb_lower"], name="Bollinger bas",
-                                 line=dict(width=1, color="gray", dash="dot"),
-                                 fill="tonexty", fillcolor="rgba(128,128,128,0.1)"))
-    fig.update_layout(xaxis_rangeslider_visible=False, height=500,
-                      margin=dict(l=0, r=0, t=10, b=0))
+                                 line=dict(width=1, color=COLORS["muted"], dash="dot"),
+                                 fill="tonexty", fillcolor="rgba(169,170,178,0.07)"))
+    fig.update_layout(
+        template="plotly_dark", height=500, xaxis_rangeslider_visible=False,
+        margin=dict(l=0, r=0, t=10, b=0),
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color=COLORS["ink"], family="Inter, sans-serif"),
+        legend=dict(orientation="h", yanchor="bottom", y=1.0, x=0),
+        xaxis=dict(gridcolor=COLORS["border"]), yaxis=dict(gridcolor=COLORS["border"]),
+    )
     return fig
 
 
@@ -145,7 +156,7 @@ if lancer:
     st.dataframe(tableau, use_container_width=True)
     st.caption(f"Référence Buy & Hold : {res.buy_hold_return_pct:+.2f} %")
 
-    st.info("📌 Performance simulée sur données passées (frais inclus). Ne garantit rien "
-            "sur l'avenir. Aucun ordre réel n'est passé.")
+    callout("Performance simulée sur données passées (frais inclus). Ne garantit rien "
+            "sur l'avenir. Aucun ordre réel n'est passé.", tone="info", icon="📌")
 else:
     st.write("👈 Choisis un actif et une stratégie dans la barre latérale, puis clique **Analyser**.")

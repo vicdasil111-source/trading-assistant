@@ -12,11 +12,15 @@ import streamlit as st
 from core.market_data import fetch_ohlcv
 from core.optimizer import optimize_strategy
 from core.strategy import BollingerStrategy, EmaCrossStrategy, RsiSmaStrategy
+from utils.ui import callout, page_header, setup_page
 
-st.set_page_config(page_title="Optimisation", page_icon="⚙️", layout="wide")
-st.title("⚙️ Auto-optimisation")
-st.caption("Le bot teste plein de réglages et garde le meilleur — puis on vérifie "
-           "s'il tient sur des données **jamais vues** (le vrai test).")
+setup_page("Optimisation", icon="⚙️")
+page_header(
+    "Auto-optimisation",
+    "Le bot teste plein de réglages et garde le meilleur, puis on vérifie s'il "
+    "tient sur des données jamais vues — le seul vrai test.",
+    icon="⚙️",
+)
 
 # Stratégies optimisables et leurs grilles de paramètres candidates.
 GRILLES = {
@@ -71,11 +75,12 @@ if lancer:
     st.write("**Meilleurs paramètres :**", res.best_params)
 
     if res.overfitting_gap > 20:
-        st.warning("⚠️ Gros écart entre entraînement et test : c'est du **sur-apprentissage**. "
-                   "Les paramètres ont mémorisé le passé sans réelle capacité de prédiction. "
-                   "Méfie-toi des stratégies « parfaites » sur l'historique !")
+        callout("Gros écart entre entraînement et test : c'est du <b>sur-apprentissage</b>. "
+                "Les paramètres ont mémorisé le passé sans réelle capacité de prédiction. "
+                "Méfie-toi des stratégies « parfaites » sur l'historique.", tone="warn")
     else:
-        st.success("✅ L'écart entraînement/test est raisonnable : la stratégie semble se généraliser.")
+        callout("L'écart entraînement/test est raisonnable : la stratégie semble "
+                "se généraliser.", tone="gain")
 
     st.subheader("Toutes les combinaisons testées (sur l'entraînement)")
     tableau = pd.DataFrame(
@@ -83,4 +88,5 @@ if lancer:
     )
     st.dataframe(tableau, use_container_width=True)
 else:
-    st.info("👈 Choisis une stratégie et clique **Optimiser**.")
+    callout("Choisis une stratégie dans la barre latérale, puis clique "
+            "<b>Optimiser</b>.", tone="info", icon="👈")
