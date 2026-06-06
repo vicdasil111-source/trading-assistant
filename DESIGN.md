@@ -49,12 +49,25 @@ des boutons primaires est `--bg` (sombre) sur indigo, pour rester lisible.
 - **En-tête de page** : titre + sous-titre + filet d'accent indigo. Cohérent sur
   toutes les pages.
 - **Sidebar** : surface plus claire que le contenu, bordure droite.
+- **Hero (accueil)** : grand titre `clamp()` (max ~3.2rem) avec un mot en accent
+  indigo, sous-titre `--muted` ≤ 60ch, rangée de *chips* (pastille verte + label).
+- **Marché en direct** : grille de tuiles `auto-fit minmax(160px)` ; chaque tuile =
+  symbole, prix tabulaire, variation 24 h (flèche ▲/▼ + signe, doublée pour le
+  daltonisme) et **sparkline SVG** (ligne + aire, couleur sémantique gain/perte).
+- **Cartes de navigation** : liens `.ta-card` (icône + titre + description +
+  « Ouvrir → »), hover lift + ombre indigo ; rythme varié (3 cartes phares puis
+  pastilles compactes) pour éviter la grille de cartes identiques.
 
 ## Motion
 
 150–220 ms, `ease` sortant. La couleur/élévation des états change en douceur ;
-pas de chorégraphie au chargement. `prefers-reduced-motion` respecté (transitions
-neutralisées).
+pas de chorégraphie au chargement. Les tuiles du marché ont une légère entrée
+(`ta-rise`). `prefers-reduced-motion` respecté (transitions/animations neutralisées).
+
+Ambiance : un voile radial indigo très discret (≈ 15 % d'opacité) en haut de
+`.stApp`, fixe, derrière tout le contenu — assez subtil pour préserver les
+contrastes WCAG AA. L'en-tête Streamlit est rendu transparent pour le laisser
+transparaître.
 
 ## Layout
 
@@ -64,6 +77,9 @@ neutralisées).
 
 ## Implementation
 
-- Tokens thème : `.streamlit/config.toml` (`[theme]`).
-- Système d'UI partagé : `utils/ui.py` — `inject_css()`, `page_header()`,
-  `callout()`. Importé en tête de chaque page.
+- Tokens thème : `.streamlit/config.toml` (`[theme]`) + variables `:root` injectées
+  par `utils/ui.py` selon le thème courant.
+- Système d'UI partagé : `utils/ui.py` — `start_page()` (config + bascule de thème +
+  CSS), `page_header()`, `callout()`, et les composants d'accueil `hero()`,
+  `section()`, `market_pulse()`, `sparkline_svg()`, `feature_cards()`, `pill_links()`.
+  Importé en tête de chaque page.

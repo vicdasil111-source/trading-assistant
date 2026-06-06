@@ -23,18 +23,10 @@ from core.market_data import fetch_ohlcv
 from core.strategy import AVAILABLE_STRATEGIES, RsiSmaStrategy, get_strategy
 from utils import notifications
 from utils.config import Config, default_config
-from utils.ui import callout, page_header, start_page
+from utils.ui import (callout, feature_cards, hero, market_pulse, page_header,
+                      pill_links, section, start_page)
 
 C = start_page("Analyse", icon="📈")
-page_header(
-    "Analyse du marché",
-    "Indicateurs, signaux et backtest sur données réelles — sans argent réel. "
-    "Ceci n'est pas un conseil financier.",
-    icon="📈",
-)
-callout("Dans la barre latérale : <b>Optimisation</b> (le bot règle ses stratégies "
-        "seul), <b>Pilote auto</b> (portefeuille fictif autonome), <b>Machine "
-        "Learning</b> (prédiction).", tone="info", icon="🧭")
 
 cfg = default_config
 PAIRES = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT", "ADA/USDT",
@@ -82,6 +74,24 @@ ucfg = Config(symbol=symbol, timeframe=timeframe, limit=limit, initial_capital=c
 @st.cache_data(show_spinner="Téléchargement des données…")
 def charger_brut(symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
     return fetch_ohlcv(symbol, timeframe, limit=limit)
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def pouls_marche(symbols: tuple[str, ...]) -> list[dict]:
+    """Prix, variation 24 h et points de sparkline pour la bande « marché en
+    direct ». Résiliente : ignore les symboles indisponibles (réseau bloqué)."""
+    out: list[dict] = []
+    for sym in symbols:
+        try:
+            d = fetch_ohlcv(sym, "1h", limit=24)
+            closes = [float(x) for x in d["close"].tolist() if x == x]
+            if len(closes) < 2:
+                continue
+            chg = (closes[-1] / closes[0] - 1.0) * 100.0 if closes[0] else 0.0
+            out.append({"symbol": sym, "price": closes[-1], "chg": chg, "spark": closes})
+        except Exception:
+            continue
+    return out
 
 
 def _plotly_layout(fig: go.Figure, height: int) -> None:
@@ -197,6 +207,12 @@ if lancer:
     st.session_state["analyse_demandee"] = True
 
 if st.session_state.get("analyse_demandee"):
+    page_header(
+        "Analyse du marché",
+        "Indicateurs, signaux et backtest sur données réelles — sans argent réel. "
+        "Ceci n'est pas un conseil financier.",
+        icon="📈",
+    )
     try:
         df = charger_brut(symbol, timeframe, limit).copy()
     except Exception as exc:
@@ -302,4 +318,46 @@ if st.session_state.get("analyse_demandee"):
             "- **Drawdown** : pire baisse depuis un sommet."
         )
 else:
-    st.write("👈 Règle tes paramètres dans la barre latérale, puis clique **Analyser**.")
+    # --- Page d'accueil : hero, marché en direct, navigation ---
+    hero(
+        'Le marché crypto, <span class="ta-hero__accent">au calme.</span>',
+        "Données réelles, indicateurs, backtests et un pilote automatique — pour "
+        "comprendre comment marchent les stratégies, sans jamais risquer d'argent réel.",
+        chips=["Données réelles", "Sans argent réel", "100 % pédagogique", "Open source"],
+    )
+
+    section("Le marché en direct", "Variation sur 24 h · source Binance")
+    pouls = pouls_marche(("BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT",
+                          "XRP/USDT", "DOGE/USDT"))
+    market_pulse(pouls, C)
+
+    section("Par où commencer ?")
+    feature_cards([
+        {"href": "Marche", "icon": "📊", "title": "Marché en direct",
+         "desc": "Les plus gros mouvements du moment, en un coup d'œil."},
+        {"href": "Pilote_auto", "icon": "🤖", "title": "Pilote automatique",
+         "desc": "Un portefeuille fictif qui applique une stratégie tout seul."},
+        {"href": "Machine_learning", "icon": "🧠", "title": "Machine Learning",
+         "desc": "Une IA tente de prédire le marché — et montre ses limites."},
+    ])
+
+    section("Aller plus loin")
+    pill_links([
+        {"href": "Optimisation", "icon": "⚙️", "label": "Optimisation"},
+        {"href": "Comparateur", "icon": "📐", "label": "Comparateur"},
+        {"href": "Portefeuille", "icon": "💼", "label": "Portefeuille"},
+        {"href": "Watchlist", "icon": "⭐", "label": "Watchlist"},
+        {"href": "Alertes", "icon": "🔔", "label": "Alertes"},
+        {"href": "Outils", "icon": "🧰", "label": "Outils & risque"},
+        {"href": "Trading_testnet", "icon": "🧪", "label": "Trading testnet"},
+        {"href": "Trading_reel", "icon": "⚡", "label": "Trading réel"},
+        {"href": "Aide_et_FAQ", "icon": "❓", "label": "Aide & FAQ"},
+    ])
+
+    st.write("")
+    callout("Pour analyser un actif en détail (indicateurs, signaux, backtest), "
+            "règle les paramètres dans la barre latérale puis clique <b>Analyser</b>.",
+            tone="info", icon="👈")
+    callout("Outil <b>éducatif</b>. Performances simulées sur le passé, sans garantie "
+            "pour l'avenir. Ceci n'est pas un conseil en investissement — voir "
+            "<b>Aide &amp; FAQ</b>.", tone="info", icon="📌")
