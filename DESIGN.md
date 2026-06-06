@@ -103,3 +103,13 @@ transparaître.
   barre d'accueil (form) renvoie la question via `st.switch_page` + `session_state`.
 - **Puissance** : marché chargé **en parallèle** (`core/market_data.fetch_many`,
   ThreadPoolExecutor) → premier affichage bien plus rapide. Résultats `@st.cache_data`.
+- **Assistant augmenté** : `core/assistant.respond()` détecte les intentions « live »
+  (prix d'un actif, actualités) et appelle des fournisseurs injectés (`price_fn` via
+  ccxt, `news_fn` via `core/news.py`). Sinon, repli sur la base statique. Toujours
+  testable (fournisseurs simulés).
+- **Actualités** : `core/news.py` lit des flux RSS publics (Google Actualités FR,
+  Cointelegraph, Decrypt) en stdlib ; `news_cards()` les rend (titres échappés).
+- **Navigation par sections** : nav auto masquée (`config.toml`
+  `showSidebarNavigation=false`) ; `utils/ui.sidebar_nav()` affiche des groupes
+  (Découvrir / Automatiser / Outils / Mon espace / Trading / Aide) en `st.page_link`,
+  avec en-têtes de groupe et surbrillance de la page active.

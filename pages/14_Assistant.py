@@ -12,21 +12,35 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 
-from core import assistant
+from core import assistant, news
+from core.market_data import fetch_ohlcv
 from utils.ui import callout, page_header, start_page
 
 start_page("Assistant", icon="💬")
 page_header("Assistant pédagogique",
             "Pose tes questions sur l'app, les indicateurs, les stratégies, le "
-            "risque ou la loi. Réponses pédagogiques — jamais de conseil en "
-            "investissement, jamais d'ordre passé.", icon="💬")
+            "risque ou la loi. Il connaît aussi les **prix en direct** et les "
+            "**actualités**. Pédagogique — jamais de conseil, jamais d'ordre passé.",
+            icon="💬")
 
-GREETING = ("Bonjour 👋 Je suis l'assistant du site. Demande-moi par exemple "
-            "« C'est quoi le RSI ? », « Quelle stratégie choisir ? » ou « Comment "
-            "activer le trading réel ? ».")
+GREETING = ("Bonjour 👋 Je suis l'assistant du site. Je peux expliquer les "
+            "indicateurs et stratégies, mais aussi te donner le **prix en direct** "
+            "(« Prix du Bitcoin ? ») et les **dernières actualités** (« Quoi de neuf ? »). "
+            "Demande-moi ce que tu veux.")
 
 if "chat" not in st.session_state:
     st.session_state["chat"] = [{"role": "assistant", "content": GREETING}]
+
+
+@st.cache_data(ttl=300, show_spinner=False)
+def _live_price(symbol: str) -> float:
+    df = fetch_ohlcv(symbol, "1h", limit=2)
+    return float(df["close"].iloc[-1])
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def _live_news() -> list[dict]:
+    return news.latest_news(6)
 
 
 def ask(question: str) -> None:
@@ -34,7 +48,8 @@ def ask(question: str) -> None:
     if not question:
         return
     st.session_state["chat"].append({"role": "user", "content": question})
-    st.session_state["chat"].append({"role": "assistant", "content": assistant.answer(question)})
+    reply = assistant.respond(question, price_fn=_live_price, news_fn=_live_news)
+    st.session_state["chat"].append({"role": "assistant", "content": reply})
 
 
 # Question envoyée depuis la barre de l'accueil (st.switch_page + session).

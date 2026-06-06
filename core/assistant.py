@@ -190,10 +190,10 @@ _FALLBACK = (
 )
 
 SUGGESTIONS: tuple[str, ...] = (
+    "Prix du Bitcoin ?",
+    "Les dernières actus crypto ?",
     "C'est quoi le RSI ?",
-    "Quelle stratégie choisir ?",
     "Comment activer le trading réel ?",
-    "Est-ce légal en France ?",
     "Dois-je acheter du Bitcoin ?",
     "Par où commencer ?",
 )
@@ -209,6 +209,85 @@ def _matches(keyword: str, question_norm: str) -> bool:
 
 def _score(question_norm: str, intent: Intent) -> int:
     return sum(1 for kw in intent.keywords if _matches(kw, question_norm))
+
+
+# --- Capacités « en direct » (prix + actualités via internet) ----------------
+# Noms d'actifs reconnus -> paire. Permet « prix du bitcoin » -> BTC/USDT.
+COINS: dict[str, str] = {
+    "btc": "BTC/USDT", "bitcoin": "BTC/USDT",
+    "eth": "ETH/USDT", "ethereum": "ETH/USDT", "ether": "ETH/USDT",
+    "sol": "SOL/USDT", "solana": "SOL/USDT",
+    "bnb": "BNB/USDT", "binance coin": "BNB/USDT",
+    "xrp": "XRP/USDT", "ripple": "XRP/USDT",
+    "doge": "DOGE/USDT", "dogecoin": "DOGE/USDT",
+    "ada": "ADA/USDT", "cardano": "ADA/USDT",
+    "avax": "AVAX/USDT", "avalanche": "AVAX/USDT",
+    "link": "LINK/USDT", "chainlink": "LINK/USDT",
+    "dot": "DOT/USDT", "polkadot": "DOT/USDT",
+    "ltc": "LTC/USDT", "litecoin": "LTC/USDT",
+    "trx": "TRX/USDT", "tron": "TRX/USDT",
+}
+
+_PRICE_KW = ("prix", "cours", "combien vaut", "combien coute", "valeur de",
+             "cote de", "ca vaut", "vaut combien")
+_NEWS_KW = ("news", "actu", "actus", "actualite", "actualites", "nouvelle",
+            "nouvelles", "journal", "journaux", "quoi de neuf", "se passe",
+            "derniere info", "dernieres infos", "headlines", "infos")
+
+
+def _find_symbol(question_norm: str) -> str | None:
+    for name, symbol in COINS.items():
+        if _matches(name, question_norm):
+            return symbol
+    return None
+
+
+def detect(question: str):
+    """Détecte une demande « live ». Renvoie ('price', 'BTC/USDT'),
+    ('news', None) ou (None, None). Pur → testable."""
+    qn = _norm(question)
+    if any(_matches(k, qn) for k in _NEWS_KW):
+        return ("news", None)
+    if any(_matches(k, qn) for k in _PRICE_KW):
+        sym = _find_symbol(qn)
+        if sym:
+            return ("price", sym)
+    return (None, None)
+
+
+def respond(question: str, *, price_fn=None, news_fn=None) -> str:
+    """Réponse « augmentée » : utilise des données en direct (prix, actualités)
+    quand des fournisseurs sont passés ET que la question s'y prête ; sinon, se
+    rabat sur la base de connaissances statique `answer()`.
+
+    `price_fn(symbol) -> float` et `news_fn() -> list[dict(title, link, source)]`
+    sont injectés par la page (qui gère le réseau) → ce module reste testable.
+    """
+    kind, arg = detect(question)
+
+    if kind == "price" and price_fn is not None:
+        try:
+            prix = float(price_fn(arg))
+        except Exception:
+            return "Je n'arrive pas à récupérer le prix en direct là, réessaie dans un instant."
+        base = arg.split("/")[0]
+        return (f"💹 **{base}** vaut actuellement **{prix:,.2f} USDT** (prix en direct). "
+                f"Pour l'analyser en détail, ouvre la page **Analyse**.\n\n" + DISCLAIMER)
+
+    if kind == "news" and news_fn is not None:
+        try:
+            items = list(news_fn() or [])
+        except Exception:
+            items = []
+        if items:
+            lignes = "\n".join(
+                f"- [{it['title']}]({it['link']})" + (f" — _{it['source']}_" if it.get("source") else "")
+                for it in items[:6])
+            return ("📰 **Dernières actualités crypto :**\n\n" + lignes
+                    + "\n\nPlus de titres sur la page **Actualités**.\n\n" + DISCLAIMER)
+        return "Je n'ai pas réussi à récupérer les actualités en direct là, réessaie plus tard."
+
+    return answer(question)
 
 
 def answer(question: str) -> str:

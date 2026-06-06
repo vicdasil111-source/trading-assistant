@@ -45,9 +45,11 @@ permet de les **tester** par backtesting et paper trading.
 - ❓ **Aide & FAQ** intégrée : risques, **cadre légal (AMF / MiCA)**, **fiscalité**,
   protection des clés API et **RGPD**.
 - 💬 **Assistant pédagogique** : une **barre de questions** qui explique indicateurs,
-  stratégies, risque et légal — **sans conseil**, 100 % local (aucune API).
-- 🖥️ **Site multi-pages Streamlit** (graphe en **chandelles**) + **CLI**, marché
-  chargé **en parallèle** (rapide).
+  stratégies, risque et légal — **sans conseil**, 100 % local (aucune API). Il connaît
+  aussi le **prix en direct** et les **dernières actualités** (accès internet).
+- 📰 **Actualités en direct** : titres de la presse crypto (flux RSS agrégés).
+- 🖥️ **Site multi-pages Streamlit** à **navigation par sections** (graphe en
+  **chandelles**) + **CLI**, marché chargé **en parallèle** (rapide).
 
 ---
 
@@ -123,10 +125,11 @@ Un site **multi-pages** s'ouvre dans le navigateur, avec dans la barre latérale
 | 💼 **Portefeuille** | Suivi manuel de tes positions, valeur et P&L en direct — nécessite un compte |
 | 🔔 **Alertes** | Conditions prix / RSI par actif, état déclenché en direct — nécessite un compte |
 | 🛰️ **Marché** | Top mouvements des actifs populaires, RSI, signaux et mini-sparklines |
+| 📰 **Actualités** | Titres des journaux crypto **en direct** (flux RSS agrégés, presse FR) |
 | 🤝 **Trading testnet** | Ordres et auto-trade sur signal en **simulation / testnet** (argent fictif) |
 | ⚡ **Trading réel** | Ordres avec confirmation ou **autopilote**, **garde-fous** + coupe-circuit, panneau **argent investi réel** (auto-hébergé) |
 | ❓ **Aide & FAQ** | Risques, **légal (AMF/MiCA)**, fiscalité, sécurité des clés, RGPD |
-| 💬 **Assistant** | Barre de questions : explique indicateurs, stratégies, risque, légal — **sans conseil** (100 % local) |
+| 💬 **Assistant** | Barre de questions : explique indicateurs/stratégies/légal **+ prix en direct + actualités** — **sans conseil** (local) |
 
 ### Pilote automatique en boucle (CLI)
 

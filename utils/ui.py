@@ -10,6 +10,7 @@ pour colorer les graphes Plotly).
 
 from __future__ import annotations
 
+import html as _html
 import os
 from urllib.parse import quote as _urlquote
 
@@ -319,14 +320,87 @@ a.ta-tile { text-decoration: none !important; color: inherit; display: block; cu
 /* ---------- Recherche d'actif (accueil) ---------- */
 .ta-find { font-size: 0.92rem; font-weight: 600; color: var(--muted); margin: 1.4rem 0 0.4rem; }
 
+/* ---------- Navigation groupée (sidebar) ---------- */
+.ta-nav-brand { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.015em;
+  color: var(--ink); margin: 0.1rem 0 0.5rem; }
+.ta-nav-group { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.07em;
+  text-transform: uppercase; color: var(--muted); margin: 0.95rem 0 0.2rem; }
+[data-testid="stSidebar"] [data-testid="stPageLink"] a { border-radius: 8px;
+  padding: 0.28rem 0.5rem; transition: background 140ms var(--ease); }
+[data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {
+  background: color-mix(in oklab, var(--primary) 13%, transparent); }
+[data-testid="stSidebar"] [data-testid="stPageLink"] a[aria-current="page"],
+[data-testid="stSidebar"] [data-testid="stPageLink"] a[data-active="true"] {
+  background: color-mix(in oklab, var(--primary) 18%, transparent); }
+.ta-nav-sep { height: 1px; background: var(--border); margin: 0.9rem 0 0.2rem; }
+
+/* ---------- Actualités (journaux en direct) ---------- */
+.ta-news { display: grid; gap: 0.6rem; }
+.ta-news-item { display: block; text-decoration: none !important; background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1rem;
+  transition: border-color 160ms var(--ease), transform 160ms var(--ease); }
+.ta-news-item:hover { border-color: color-mix(in oklab, var(--primary) 55%, var(--border));
+  transform: translateY(-2px); }
+.ta-news-title { color: var(--ink) !important; font-weight: 600; font-size: 0.98rem; line-height: 1.35; }
+.ta-news-meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.3rem; }
+
 @media (prefers-reduced-motion: reduce) {
   .stApp { background-attachment: scroll; }
   .ta-tile, .ta-card, .ta-pill, .ta-live__dot,
-  .ta-skel::after { animation: none !important; transition: none !important; }
-  .ta-tile:hover, .ta-card:hover, .ta-pill:hover { transform: none !important; }
+  .ta-skel::after, .ta-news-item { animation: none !important; transition: none !important; }
+  .ta-tile:hover, .ta-card:hover, .ta-pill:hover, .ta-news-item:hover { transform: none !important; }
 }
 </style>
 """
+
+
+# Navigation PAR SECTIONS (la nav auto de Streamlit est masquée via config.toml).
+# Chaque entrée : (chemin du fichier, libellé, icône).
+NAV_GROUPS = [
+    ("Découvrir", [
+        ("dashboard.py", "Accueil", "🏠"),
+        ("pages/10_Marche.py", "Marché", "🛰️"),
+        ("pages/15_Actualites.py", "Actualités", "📰"),
+    ]),
+    ("Automatiser", [
+        ("pages/1_Optimisation.py", "Optimisation", "⚙️"),
+        ("pages/2_Pilote_auto.py", "Pilote auto", "🤖"),
+        ("pages/3_Machine_learning.py", "Machine Learning", "🧠"),
+    ]),
+    ("Outils", [
+        ("pages/7_Comparateur.py", "Comparateur", "📊"),
+        ("pages/6_Outils.py", "Outils & risque", "🧰"),
+    ]),
+    ("Mon espace", [
+        ("pages/4_Compte.py", "Compte", "👤"),
+        ("pages/5_Watchlist.py", "Watchlist", "⭐"),
+        ("pages/8_Portefeuille.py", "Portefeuille", "💼"),
+        ("pages/9_Alertes.py", "Alertes", "🔔"),
+    ]),
+    ("Trading", [
+        ("pages/11_Trading_testnet.py", "Trading testnet", "🧪"),
+        ("pages/12_Trading_reel.py", "Trading réel", "⚡"),
+    ]),
+    ("Aide", [
+        ("pages/14_Assistant.py", "Assistant", "💬"),
+        ("pages/13_Aide_et_FAQ.py", "Aide & FAQ", "❓"),
+    ]),
+]
+
+
+def sidebar_nav() -> None:
+    """Affiche la navigation regroupée par sections en haut de la sidebar."""
+    with st.sidebar:
+        st.markdown('<div class="ta-nav-brand">📈 Trading Assistant</div>',
+                    unsafe_allow_html=True)
+        for titre, items in NAV_GROUPS:
+            st.markdown(f'<div class="ta-nav-group">{titre}</div>', unsafe_allow_html=True)
+            for path, label, icon in items:
+                try:
+                    st.page_link(path, label=label, icon=icon)
+                except Exception:
+                    pass  # page absente : on l'ignore plutôt que de casser la nav
+        st.markdown('<div class="ta-nav-sep"></div>', unsafe_allow_html=True)
 
 
 def init_page(title: str, icon: str = "📈", layout: str = "wide") -> None:
@@ -363,6 +437,7 @@ def start_page(title: str, icon: str = "📈", layout: str = "wide") -> dict:
     """
     _load_secrets_to_env()
     init_page(title, icon, layout)
+    sidebar_nav()
     _theme_toggle()
     palette = inject_theme()
     # Import paresseux : account_ui importe utils.ui ; à ce stade ui est chargé.
@@ -589,3 +664,23 @@ def pill_links(items: list[dict]) -> None:
             f'<span class="ta-pill__ic">{it["icon"]}</span>{it["label"]}</a>'
         )
     st.markdown(f'<div class="ta-pills">{"".join(html)}</div>', unsafe_allow_html=True)
+
+
+def news_cards(items: list[dict]) -> None:
+    """Liste d'actualités (titre cliquable + source/date). Échappe le HTML car
+    le contenu vient de flux externes."""
+    if not items:
+        callout("Actualités indisponibles pour le moment — réessaie plus tard.", tone="warn")
+        return
+    cards = []
+    for it in items:
+        title = _html.escape(it.get("title", ""))
+        link = _html.escape(it.get("link", "#"), quote=True)
+        meta = " · ".join(x for x in (it.get("source", ""), it.get("date", "")) if x)
+        meta = _html.escape(meta)
+        cards.append(
+            f'<a class="ta-news-item" href="{link}" target="_blank" rel="noopener noreferrer">'
+            f'<div class="ta-news-title">{title}</div>'
+            f'<div class="ta-news-meta">{meta}</div></a>'
+        )
+    st.markdown(f'<div class="ta-news">{"".join(cards)}</div>', unsafe_allow_html=True)

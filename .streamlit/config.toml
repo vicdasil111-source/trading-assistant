@@ -9,5 +9,9 @@ borderColor = "#31323a"               # contours
 baseRadius = "0.6rem"
 font = "sans-serif"
 
+[client]
+# On masque la navigation auto : utils/ui.py affiche une nav PAR SECTIONS.
+showSidebarNavigation = false
+
 [server]
 headless = true

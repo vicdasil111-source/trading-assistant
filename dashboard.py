@@ -389,6 +389,7 @@ else:
     section("Aller plus loin")
     pill_links([
         {"href": "Assistant", "icon": "💬", "label": "Assistant"},
+        {"href": "Actualites", "icon": "📰", "label": "Actualités"},
         {"href": "Optimisation", "icon": "⚙️", "label": "Optimisation"},
         {"href": "Comparateur", "icon": "📐", "label": "Comparateur"},
         {"href": "Portefeuille", "icon": "💼", "label": "Portefeuille"},
