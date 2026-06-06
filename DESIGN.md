@@ -90,4 +90,10 @@ transparaître.
   `feature_cards()`, `pill_links()`. Importé en tête de chaque page.
 - Lien profond : les tuiles pointent vers `/?symbol=BTC/USDT` ; `dashboard.py` lit
   `st.query_params["symbol"]`, présélectionne l'actif (clé `ta_actif`) et lance
-  l'analyse automatiquement.
+  l'analyse automatiquement. La **recherche d'accueil** (selectbox + bouton) écrit
+  le même paramètre. Bouton **« ← Accueil »** pour revenir au hall (réinitialise
+  l'état + les query params).
+- **Squelettes de chargement** (`skeleton_market`, `market_grid_html`) : tuiles
+  scintillantes (`ta-skel` + `ta-shimmer`) affichées dans un `st.empty()` pendant le
+  fetch, remplacées par la vraie grille. Conforme au registre product (« skeletons,
+  pas de spinner au milieu du contenu »). `prefers-reduced-motion` désactive le scintillement.

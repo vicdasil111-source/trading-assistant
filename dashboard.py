@@ -23,8 +23,8 @@ from core.market_data import fetch_ohlcv
 from core.strategy import AVAILABLE_STRATEGIES, RsiSmaStrategy, get_strategy
 from utils import notifications
 from utils.config import Config, default_config
-from utils.ui import (callout, feature_cards, hero, market_grid, page_header,
-                      pill_links, section, start_page)
+from utils.ui import (callout, feature_cards, hero, market_grid_html, page_header,
+                      pill_links, section, skeleton_market, start_page)
 
 C = start_page("Analyse", icon="📈")
 
@@ -32,10 +32,12 @@ cfg = default_config
 PAIRES = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT", "ADA/USDT",
           "DOGE/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT", "LTC/USDT", "TRX/USDT"]
 
-# Lien profond : une tuile cliquée ailleurs (?symbol=BTC/USDT) ouvre l'analyse.
+# Lien profond : une tuile cliquée ailleurs (?symbol=BTC/USDT) ou la recherche
+# d'accueil ouvre l'analyse. On consomme chaque symbole distinct une seule fois
+# (pour ne pas écraser un choix fait ensuite dans la barre latérale).
 _demande = st.query_params.get("symbol")
-if _demande and not st.session_state.get("_drill_done"):
-    st.session_state["_drill_done"] = True
+if _demande and st.session_state.get("_drill_last") != _demande:
+    st.session_state["_drill_last"] = _demande
     if _demande in PAIRES:
         st.session_state["ta_actif"] = _demande
     st.session_state["analyse_demandee"] = True
@@ -215,6 +217,10 @@ if lancer:
     st.session_state["analyse_demandee"] = True
 
 if st.session_state.get("analyse_demandee"):
+    if st.button("← Accueil"):
+        st.session_state["analyse_demandee"] = False
+        st.query_params.clear()
+        st.rerun()
     page_header(
         "Analyse du marché",
         "Indicateurs, signaux et backtest sur données réelles — sans argent réel. "
@@ -334,10 +340,25 @@ else:
         chips=["Données réelles", "Sans argent réel", "100 % pédagogique", "Open source"],
     )
 
+    # Recherche rapide : choisis un actif → son analyse complète s'ouvre.
+    st.markdown('<div class="ta-find">Analyser un actif</div>', unsafe_allow_html=True)
+    fc1, fc2 = st.columns([3, 1])
+    cible = fc1.selectbox("Actif à analyser", PAIRES, index=None,
+                          placeholder="Choisis un actif (BTC, ETH, SOL…)",
+                          label_visibility="collapsed", key="home_search")
+    if fc2.button("Analyser →", type="primary", use_container_width=True):
+        if cible:
+            st.query_params["symbol"] = cible
+            st.rerun()
+        else:
+            st.caption("Choisis d'abord un actif dans la liste.")
+
     section("Le marché en direct", "24 h · clique pour analyser", live=True)
+    _ph = st.empty()
+    _ph.markdown(skeleton_market(6), unsafe_allow_html=True)
     pouls = pouls_marche(("BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT",
                           "XRP/USDT", "DOGE/USDT"))
-    market_grid(pouls, C, link=True)
+    _ph.markdown(market_grid_html(pouls, C, link=True), unsafe_allow_html=True)
 
     section("Par où commencer ?")
     feature_cards([

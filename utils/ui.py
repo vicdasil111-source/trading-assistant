@@ -301,9 +301,28 @@ a.ta-tile { text-decoration: none !important; color: inherit; display: block; cu
   100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--gain) 0%, transparent); }
 }
 
+/* ---------- Squelettes de chargement (mieux qu'un spinner) ---------- */
+.ta-skel { position: relative; overflow: hidden; }
+.ta-skel::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent,
+    color-mix(in oklab, var(--ink) 9%, transparent), transparent);
+  animation: ta-shimmer 1.25s var(--ease) infinite; }
+@keyframes ta-shimmer { to { transform: translateX(100%); } }
+.ta-skel-line { background: color-mix(in oklab, var(--muted) 22%, transparent); border-radius: 6px; height: 0.85rem; }
+.ta-skel-line.tall { height: 1.35rem; margin: 0.35rem 0; }
+.ta-skel-line.w40 { width: 40%; } .ta-skel-line.w70 { width: 70%; }
+.ta-skel-spark { margin-top: 0.5rem; height: 38px; border-radius: 8px;
+  background: color-mix(in oklab, var(--muted) 13%, transparent); }
+.ta-skel-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.7rem; margin-bottom: 0.6rem; }
+.ta-skel-metric { height: 90px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+
+/* ---------- Recherche d'actif (accueil) ---------- */
+.ta-find { font-size: 0.92rem; font-weight: 600; color: var(--muted); margin: 1.4rem 0 0.4rem; }
+
 @media (prefers-reduced-motion: reduce) {
   .stApp { background-attachment: scroll; }
-  .ta-tile, .ta-card, .ta-pill, .ta-live__dot { animation: none !important; transition: none !important; }
+  .ta-tile, .ta-card, .ta-pill, .ta-live__dot,
+  .ta-skel::after { animation: none !important; transition: none !important; }
   .ta-tile:hover, .ta-card:hover, .ta-pill:hover { transform: none !important; }
 }
 </style>
@@ -452,16 +471,12 @@ def sparkline_svg(values, color: str, width: int = 140, height: int = 38) -> str
     )
 
 
-def market_grid(items: list[dict], palette: dict, link: bool = True) -> None:
-    """Grille de tuiles marche. Chaque item : {symbol, price, chg, spark} et,
-    en option, {rsi, trend, signal} pour la rangee de badges du bas.
-
-    link=True -> chaque tuile est un lien vers l'analyse de l'actif (/?symbol=...),
-    traite par la page d'accueil.
-    """
+def _grid_html(items: list[dict], palette: dict, link: bool = True) -> str:
+    """Construit le HTML d'une grille de tuiles marche (voir market_grid)."""
     if not items:
-        callout("Marche momentanement indisponible, reessaie dans un instant.", tone="warn")
-        return
+        return ('<div class="ta-callout ta-callout--warn">'
+                '<span class="ta-callout__icon">⚠️</span><span>Marche momentanement '
+                'indisponible, reessaie dans un instant.</span></div>')
     tiles = []
     for it in items:
         chg = it["chg"]
@@ -498,7 +513,28 @@ def market_grid(items: list[dict], palette: dict, link: bool = True) -> None:
             tiles.append(f'<a class="ta-tile" href="{href}" target="_self">{inner}</a>')
         else:
             tiles.append(f'<div class="ta-tile">{inner}</div>')
-    st.markdown(f'<div class="ta-pulse">{"".join(tiles)}</div>', unsafe_allow_html=True)
+    return f'<div class="ta-pulse">{"".join(tiles)}</div>'
+
+
+def market_grid(items: list[dict], palette: dict, link: bool = True) -> None:
+    """Rend une grille de tuiles marche cliquables (voir _grid_html)."""
+    st.markdown(_grid_html(items, palette, link), unsafe_allow_html=True)
+
+
+def market_grid_html(items: list[dict], palette: dict, link: bool = True) -> str:
+    """Comme market_grid mais renvoie le HTML (pour un st.empty placeholder)."""
+    return _grid_html(items, palette, link)
+
+
+def skeleton_market(tiles: int = 8, metrics: int = 0) -> str:
+    """HTML de squelettes scintillants pendant le chargement du marche."""
+    mrow = ""
+    if metrics:
+        cells = "".join('<div class="ta-skel-metric ta-skel"></div>' for _ in range(metrics))
+        mrow = f'<div class="ta-skel-metrics">{cells}</div>'
+    cell = ('<div class="ta-tile ta-skel"><div class="ta-skel-line w40"></div>'
+            '<div class="ta-skel-line tall w70"></div><div class="ta-skel-spark"></div></div>')
+    return f'{mrow}<div class="ta-pulse">{cell * tiles}</div>'
 
 
 def market_pulse(items: list[dict], palette: dict) -> None:  # legacy, voir market_grid

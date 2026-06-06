@@ -11,7 +11,8 @@ import streamlit as st
 from core import indicators
 from core.market_data import fetch_ohlcv
 from core.strategy import RsiSmaStrategy
-from utils.ui import callout, market_grid, page_header, section, start_page
+from utils.ui import (callout, market_grid, page_header, section,
+                      skeleton_market, start_page)
 
 C = start_page("Marché", icon="🛰️")
 page_header("Marché en direct",
@@ -30,7 +31,7 @@ with st.sidebar:
     tri = st.selectbox("Trier par", TRIS)
 
 
-@st.cache_data(show_spinner="Lecture du marché…", ttl=300)
+@st.cache_data(show_spinner=False, ttl=300)  # le squelette tient lieu d'indicateur de chargement
 def ligne(symbol: str, timeframe: str) -> dict:
     """Indicateurs + sparkline pour un actif (mis en cache 5 min)."""
     df = fetch_ohlcv(symbol, timeframe, limit=60)
@@ -48,12 +49,15 @@ def ligne(symbol: str, timeframe: str) -> dict:
     }
 
 
+_ph = st.empty()
+_ph.markdown(skeleton_market(len(actifs) or 8, metrics=3), unsafe_allow_html=True)
 items = []
 for sym in actifs:
     try:
         items.append(ligne(sym, timeframe))
     except Exception:
         pass
+_ph.empty()
 
 if not items:
     callout("Aucune donnée disponible pour le moment.", tone="warn")
@@ -79,7 +83,10 @@ else:
     items.sort(key=lambda x: x["symbol"])
 
 # --- Grille de tuiles cliquables ---
-section("Tous les actifs", f"{len(items)} actifs · {timeframe} · clique pour analyser", live=True)
+_up = sum(1 for it in items if it["chg"] > 0.05)
+_down = sum(1 for it in items if it["chg"] < -0.05)
+section("Tous les actifs",
+        f"{_up} ↑ · {_down} ↓ · {timeframe} · clique pour analyser", live=True)
 market_grid(items, C, link=True)
 
 # --- Tableau détaillé (pour qui veut la densité) ---
