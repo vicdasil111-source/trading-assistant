@@ -59,6 +59,37 @@ with st.expander("État de la connexion (ce qui est possible ici)", expanded=Tru
                 "Utilise des clés <b>« trading » uniquement, SANS droit de retrait</b>.",
                 tone="info")
 
+# --- Argent investi réel (lecture seule) -----------------------------------
+if mode_info["real_available"]:
+    st.subheader("💰 Ton argent réel (positions)")
+    if st.button("Rafraîchir le solde réel", key="refresh_bal"):
+        st.session_state.pop("_real_snap", None)
+    try:
+        if "_real_snap" not in st.session_state:
+            st.session_state["_real_snap"] = execution.account_positions(testnet=False)
+        snap = st.session_state["_real_snap"]
+        b1, b2 = st.columns(2)
+        b1.metric("Liquidités (USDT)", f"{snap['cash_usdt']:,.2f}")
+        b2.metric("Positions ouvertes", len(snap["positions"]))
+        if snap["positions"]:
+            import pandas as pd
+            df_pos = pd.DataFrame(snap["positions"]).rename(
+                columns={"asset": "Actif", "amount": "Quantité", "free": "Disponible"})
+            st.dataframe(df_pos.set_index("Actif"), use_container_width=True)
+        else:
+            callout("Aucune position pour le moment (hors liquidités USDT).", tone="info")
+        callout("Lecture seule : ce panneau n'achète ni ne vend rien. Tes fonds "
+                "restent chez Binance.", tone="info", icon="🔒")
+    except Exception as exc:
+        callout(f"Impossible de lire le solde réel : {exc}", tone="warn")
+else:
+    callout("💰 <b>Argent investi réel</b> : ce panneau affichera tes liquidités et "
+            "tes positions Binance une fois l'app <b>auto-hébergée</b> avec tes clés "
+            "(<code>BINANCE_API_KEY</code> / <code>BINANCE_SECRET</code> + "
+            "<code>I_UNDERSTAND_REAL_MONEY_RISK=yes</code>). Sur le site public il "
+            "reste <b>verrouillé</b> — on ne touche jamais à l'argent d'autrui.",
+            tone="info")
+
 # --- 1. Acceptation des risques --------------------------------------------
 st.subheader("1. Comprendre et accepter les risques")
 acks = [

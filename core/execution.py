@@ -58,6 +58,28 @@ def fetch_balance(testnet: bool = True) -> dict:
     return exchange.fetch_balance()
 
 
+def account_positions(testnet: bool = False) -> dict:
+    """Résumé **en lecture seule** du compte : liquidités USDT + positions non
+    nulles. Nécessite des clés (réelles si testnet=False). Ne passe AUCUN ordre.
+
+    Renvoie {"cash_usdt": float, "positions": [{"asset","amount","free"}, ...]}.
+    """
+    bal = fetch_balance(testnet)
+    totals = bal.get("total", {}) or {}
+    free = bal.get("free", {}) or {}
+    cash = float(totals.get("USDT", 0) or 0)
+    positions = []
+    for asset, amount in totals.items():
+        amount = float(amount or 0)
+        if asset == "USDT" or amount <= 0:
+            continue
+        positions.append({
+            "asset": asset, "amount": amount, "free": float(free.get(asset, 0) or 0),
+        })
+    positions.sort(key=lambda p: p["amount"], reverse=True)
+    return {"cash_usdt": cash, "positions": positions}
+
+
 def account_mode() -> dict:
     """Décrit ce qui est possible selon l'environnement (clés + acceptation du risque).
 

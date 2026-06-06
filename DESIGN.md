@@ -97,3 +97,9 @@ transparaître.
   scintillantes (`ta-skel` + `ta-shimmer`) affichées dans un `st.empty()` pendant le
   fetch, remplacées par la vraie grille. Conforme au registre product (« skeletons,
   pas de spinner au milieu du contenu »). `prefers-reduced-motion` désactive le scintillement.
+- **Assistant** (`pages/14_Assistant.py` + `core/assistant.py`) : barre de questions
+  (`st.chat_input`) + bulles `st.chat_message` (avatars 🤖/🧑) + chips de suggestions.
+  Moteur d'intentions 100 % local (déterministe, testé) — jamais de conseil. Une
+  barre d'accueil (form) renvoie la question via `st.switch_page` + `session_state`.
+- **Puissance** : marché chargé **en parallèle** (`core/market_data.fetch_many`,
+  ThreadPoolExecutor) → premier affichage bien plus rapide. Résultats `@st.cache_data`.

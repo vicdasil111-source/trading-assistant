@@ -44,7 +44,10 @@ permet de les **tester** par backtesting et paper trading.
   ordres max/jour) et un **coupe-circuit** d'arrêt d'urgence.
 - ❓ **Aide & FAQ** intégrée : risques, **cadre légal (AMF / MiCA)**, **fiscalité**,
   protection des clés API et **RGPD**.
-- 🖥️ **Site multi-pages Streamlit** (graphe en **chandelles**) + **CLI**.
+- 💬 **Assistant pédagogique** : une **barre de questions** qui explique indicateurs,
+  stratégies, risque et légal — **sans conseil**, 100 % local (aucune API).
+- 🖥️ **Site multi-pages Streamlit** (graphe en **chandelles**) + **CLI**, marché
+  chargé **en parallèle** (rapide).
 
 ---
 
@@ -121,8 +124,9 @@ Un site **multi-pages** s'ouvre dans le navigateur, avec dans la barre latérale
 | 🔔 **Alertes** | Conditions prix / RSI par actif, état déclenché en direct — nécessite un compte |
 | 🛰️ **Marché** | Top mouvements des actifs populaires, RSI, signaux et mini-sparklines |
 | 🤝 **Trading testnet** | Ordres et auto-trade sur signal en **simulation / testnet** (argent fictif) |
-| ⚡ **Trading réel** | Ordres avec confirmation ou **autopilote**, **garde-fous** + coupe-circuit |
+| ⚡ **Trading réel** | Ordres avec confirmation ou **autopilote**, **garde-fous** + coupe-circuit, panneau **argent investi réel** (auto-hébergé) |
 | ❓ **Aide & FAQ** | Risques, **légal (AMF/MiCA)**, fiscalité, sécurité des clés, RGPD |
+| 💬 **Assistant** | Barre de questions : explique indicateurs, stratégies, risque, légal — **sans conseil** (100 % local) |
 
 ### Pilote automatique en boucle (CLI)
 

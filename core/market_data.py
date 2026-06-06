@@ -10,6 +10,7 @@ OHLCV = Open, High, Low, Close, Volume (ouverture, haut, bas, clôture, volume).
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pandas as pd
@@ -99,3 +100,33 @@ def fetch_ohlcv(
             f"et aucun cache ni exemple disponible. Vérifie ta connexion internet "
             f"et le nom du symbole (ex. 'BTC/USDT')."
         ) from exc
+
+
+def fetch_many(
+    symbols,
+    timeframe: str = "1d",
+    limit: int = 60,
+    max_workers: int = 8,
+) -> dict[str, pd.DataFrame]:
+    """Récupère plusieurs symboles **en parallèle** (I/O réseau → gros gain de
+    vitesse). Chaque appel à `fetch_ohlcv` crée sa propre connexion ccxt, donc
+    c'est sûr en threads. Les symboles en échec sont simplement ignorés.
+
+    Renvoie un dict {symbole: DataFrame} (sans les symboles indisponibles).
+    """
+    symbols = list(symbols)
+    if not symbols:
+        return {}
+
+    def _one(sym: str):
+        try:
+            return sym, fetch_ohlcv(sym, timeframe, limit=limit)
+        except Exception:  # réseau, symbole invalide… : on saute
+            return sym, None
+
+    out: dict[str, pd.DataFrame] = {}
+    with ThreadPoolExecutor(max_workers=min(max_workers, len(symbols))) as pool:
+        for sym, df in pool.map(_one, symbols):
+            if df is not None:
+                out[sym] = df
+    return out

@@ -19,7 +19,7 @@ import streamlit as st
 
 from core import indicators
 from core.backtest import backtest
-from core.market_data import fetch_ohlcv
+from core.market_data import fetch_many, fetch_ohlcv
 from core.strategy import AVAILABLE_STRATEGIES, RsiSmaStrategy, get_strategy
 from utils import notifications
 from utils.config import Config, default_config
@@ -89,18 +89,18 @@ def charger_brut(symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
 @st.cache_data(ttl=600, show_spinner=False)
 def pouls_marche(symbols: tuple[str, ...]) -> list[dict]:
     """Prix, variation 24 h et points de sparkline pour la bande « marché en
-    direct ». Résiliente : ignore les symboles indisponibles (réseau bloqué)."""
+    direct ». Fetch en parallèle + résilient (ignore les symboles indisponibles)."""
+    data = fetch_many(symbols, "1h", limit=24)
     out: list[dict] = []
-    for sym in symbols:
-        try:
-            d = fetch_ohlcv(sym, "1h", limit=24)
-            closes = [float(x) for x in d["close"].tolist() if x == x]
-            if len(closes) < 2:
-                continue
-            chg = (closes[-1] / closes[0] - 1.0) * 100.0 if closes[0] else 0.0
-            out.append({"symbol": sym, "price": closes[-1], "chg": chg, "spark": closes})
-        except Exception:
+    for sym in symbols:  # conserve l'ordre demandé
+        d = data.get(sym)
+        if d is None:
             continue
+        closes = [float(x) for x in d["close"].tolist() if x == x]
+        if len(closes) < 2:
+            continue
+        chg = (closes[-1] / closes[0] - 1.0) * 100.0 if closes[0] else 0.0
+        out.append({"symbol": sym, "price": closes[-1], "chg": chg, "spark": closes})
     return out
 
 
@@ -341,6 +341,20 @@ else:
     )
 
     # Recherche rapide : choisis un actif → son analyse complète s'ouvre.
+    # Barre de questions directe à l'assistant (formulaire : Entrée valide aussi).
+    st.markdown('<div class="ta-find">💬 Une question ? Demande à l\'assistant</div>',
+                unsafe_allow_html=True)
+    with st.form("home_ask_form", clear_on_submit=False, border=False):
+        qc1, qc2 = st.columns([3, 1])
+        question = qc1.text_input(
+            "Question à l'assistant",
+            placeholder="Ex. C'est quoi le RSI ? Comment activer le trading réel ?",
+            label_visibility="collapsed", key="home_ask")
+        demande = qc2.form_submit_button("Demander 💬", use_container_width=True)
+    if demande and question.strip():
+        st.session_state["assistant_pending"] = question
+        st.switch_page("pages/14_Assistant.py")
+
     st.markdown('<div class="ta-find">Analyser un actif</div>', unsafe_allow_html=True)
     fc1, fc2 = st.columns([3, 1])
     cible = fc1.selectbox("Actif à analyser", PAIRES, index=None,
@@ -368,10 +382,13 @@ else:
          "desc": "Un portefeuille fictif qui applique une stratégie tout seul."},
         {"href": "Machine_learning", "icon": "🧠", "title": "Machine Learning",
          "desc": "Une IA tente de prédire le marché — et montre ses limites."},
+        {"href": "Assistant", "icon": "💬", "title": "Assistant",
+         "desc": "Pose une question, l'agent t'explique tout (sans conseil)."},
     ])
 
     section("Aller plus loin")
     pill_links([
+        {"href": "Assistant", "icon": "💬", "label": "Assistant"},
         {"href": "Optimisation", "icon": "⚙️", "label": "Optimisation"},
         {"href": "Comparateur", "icon": "📐", "label": "Comparateur"},
         {"href": "Portefeuille", "icon": "💼", "label": "Portefeuille"},

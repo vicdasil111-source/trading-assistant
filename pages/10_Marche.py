@@ -9,7 +9,7 @@ import pandas as pd
 import streamlit as st
 
 from core import indicators
-from core.market_data import fetch_ohlcv
+from core.market_data import fetch_many
 from core.strategy import RsiSmaStrategy
 from utils.ui import (callout, market_grid, page_header, section,
                       skeleton_market, start_page)
@@ -32,31 +32,37 @@ with st.sidebar:
 
 
 @st.cache_data(show_spinner=False, ttl=300)  # le squelette tient lieu d'indicateur de chargement
-def ligne(symbol: str, timeframe: str) -> dict:
-    """Indicateurs + sparkline pour un actif (mis en cache 5 min)."""
-    df = fetch_ohlcv(symbol, timeframe, limit=60)
-    indicators.add_rsi(df)
-    indicators.add_sma(df, window=50)
-    df = RsiSmaStrategy().generate_signals(df)
-    closes = [float(x) for x in df["close"].tolist()]
-    last, prev = closes[-1], closes[-2]
-    var1 = (last / prev - 1) * 100
-    var7 = (last / closes[-8] - 1) * 100 if len(closes) >= 8 else float("nan")
-    return {
-        "symbol": symbol, "price": last, "chg": var1, "var7": var7,
-        "rsi": float(df["rsi"].iloc[-1]), "trend": indicators.detect_trend(df),
-        "signal": int(df["signal"].iloc[-1]), "spark": closes[-24:],
-    }
+def charger_marche(symbols: tuple[str, ...], timeframe: str) -> list[dict]:
+    """Indicateurs + sparkline pour plusieurs actifs. Fetch en PARALLÈLE puis
+    calcul séquentiel (léger). Mis en cache 5 min."""
+    data = fetch_many(symbols, timeframe, limit=60)
+    rows: list[dict] = []
+    for sym in symbols:  # conserve l'ordre
+        df = data.get(sym)
+        if df is None:
+            continue
+        try:
+            df = df.copy()
+            indicators.add_rsi(df)
+            indicators.add_sma(df, window=50)
+            df = RsiSmaStrategy().generate_signals(df)
+            closes = [float(x) for x in df["close"].tolist()]
+            last, prev = closes[-1], closes[-2]
+            var1 = (last / prev - 1) * 100
+            var7 = (last / closes[-8] - 1) * 100 if len(closes) >= 8 else float("nan")
+            rows.append({
+                "symbol": sym, "price": last, "chg": var1, "var7": var7,
+                "rsi": float(df["rsi"].iloc[-1]), "trend": indicators.detect_trend(df),
+                "signal": int(df["signal"].iloc[-1]), "spark": closes[-24:],
+            })
+        except Exception:
+            continue
+    return rows
 
 
 _ph = st.empty()
 _ph.markdown(skeleton_market(len(actifs) or 8, metrics=3), unsafe_allow_html=True)
-items = []
-for sym in actifs:
-    try:
-        items.append(ligne(sym, timeframe))
-    except Exception:
-        pass
+items = charger_marche(tuple(actifs), timeframe)
 _ph.empty()
 
 if not items:
