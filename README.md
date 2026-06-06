@@ -4,10 +4,14 @@ Assistant de trading **crypto** à but **pédagogique**. Il récupère des donn�
 marché, calcule des indicateurs techniques, génère des signaux d'achat/vente, et
 permet de les **tester** par backtesting et paper trading.
 
-> ⚠️ **Important — aucun argent réel.**
-> Cette version ne passe **aucun ordre réel** et ne demande **aucune clé API privée**.
-> Tout est analyse et simulation. Rien ici n'est un conseil financier. Le trading
-> comporte un risque réel de perte ; la performance passée ne garantit pas l'avenir.
+> ⚠️ **Important — sécurité d'abord.**
+> Par défaut tout est en **simulation** ; le **site public** ne passe **aucun ordre
+> réel** (aucune clé n'y est présente). Le **trading réel est possible uniquement en
+> auto-hébergement**, avec **tes** clés et un opt-in explicite
+> (`I_UNDERSTAND_REAL_MONEY_RISK=yes`), encadré par des **garde-fous** et un
+> **coupe-circuit**. Rien ici n'est un conseil financier. Le trading comporte un
+> risque réel de **perte totale** ; la performance passée ne garantit pas l'avenir.
+> Voir [`MENTIONS_LEGALES.md`](MENTIONS_LEGALES.md) et la page **Aide & FAQ**.
 
 ---
 
@@ -35,6 +39,11 @@ permet de les **tester** par backtesting et paper trading.
 - 🤖 **Pilote automatique** : portefeuille fictif autonome qui décide seul.
 - 🧠 **Machine Learning** : prédiction de tendance (scikit-learn), évaluée honnêtement.
 - 🧪 **Testnet Binance** (argent fictif) pour apprendre l'exécution sans risque.
+- ⚡ **Trading réel optionnel** (auto-hébergé) : ordre **avec confirmation** ou
+  **autopilote**, protégé par des **garde-fous** (plafond/ordre, perte max/jour,
+  ordres max/jour) et un **coupe-circuit** d'arrêt d'urgence.
+- ❓ **Aide & FAQ** intégrée : risques, **cadre légal (AMF / MiCA)**, **fiscalité**,
+  protection des clés API et **RGPD**.
 - 🖥️ **Site multi-pages Streamlit** (graphe en **chandelles**) + **CLI**.
 
 ---
@@ -112,6 +121,8 @@ Un site **multi-pages** s'ouvre dans le navigateur, avec dans la barre latérale
 | 🔔 **Alertes** | Conditions prix / RSI par actif, état déclenché en direct — nécessite un compte |
 | 🛰️ **Marché** | Top mouvements des actifs populaires, RSI, signaux et mini-sparklines |
 | 🤝 **Trading testnet** | Ordres et auto-trade sur signal en **simulation / testnet** (argent fictif) |
+| ⚡ **Trading réel** | Ordres avec confirmation ou **autopilote**, **garde-fous** + coupe-circuit |
+| ❓ **Aide & FAQ** | Risques, **légal (AMF/MiCA)**, fiscalité, sécurité des clés, RGPD |
 
 ### Pilote automatique en boucle (CLI)
 
@@ -122,17 +133,35 @@ python autopilot_runner.py --once   # un seul pas
 
 Le pilote tourne en simulation (argent fictif). `Ctrl+C` pour arrêter ; l'état est sauvegardé.
 
-### Exécution sur testnet (apprentissage, argent fictif)
+### Exécution : simulation → testnet → réel (3 niveaux)
 
-L'exécution d'ordres réels **autonome n'est pas supportée** (trop risqué). Pour apprendre
-l'exécution sans risque, le module `core/execution.py` parle au **testnet Binance**
-(argent fictif). Tout est en `dry_run` par défaut. Clés gratuites sur
+Tout part du même module `core/execution.py`, avec une montée en risque **graduelle
+et explicite**. Par défaut, tout est en `dry_run` (rien n'est envoyé).
+
+**1. Testnet (recommandé pour apprendre, argent fictif).** Clés gratuites sur
 <https://testnet.binance.vision/> :
 
 ```powershell
 $env:BINANCE_TESTNET_API_KEY = "..."
 $env:BINANCE_TESTNET_SECRET  = "..."
 ```
+
+**2. Réel (auto-hébergement uniquement, à tes risques).** Le trading réel n'est
+déverrouillé que si **tu** définis tes clés **et** acceptes explicitement le risque.
+Utilise des clés **« trading » seulement, sans droit de retrait** :
+
+```powershell
+$env:BINANCE_API_KEY = "..."           # trading seulement, SANS retrait
+$env:BINANCE_SECRET  = "..."
+$env:I_UNDERSTAND_REAL_MONEY_RISK = "yes"
+```
+
+Chaque ordre réel est alors filtré par `core/trading_guard.py` :
+**plafond par ordre**, **perte max/jour**, **nombre d'ordres/jour**, et un
+**coupe-circuit** (fichier `data/KILL_SWITCH`, bouton « arrêt d'urgence » dans l'UI).
+Le **site public** n'a aucune de ces variables : il reste donc en simulation/testnet,
+par conception (on ne manipule jamais l'argent d'autrui). Détails : page **Aide & FAQ**
+et [`MENTIONS_LEGALES.md`](MENTIONS_LEGALES.md).
 
 ---
 
@@ -150,7 +179,8 @@ trading-assistant/
 │   ├── optimizer.py     # Auto-optimisation (train/test, anti sur-apprentissage)
 │   ├── ml_strategy.py   # Stratégie Machine Learning (scikit-learn)
 │   ├── autopilot.py     # Pilote automatique (paper trading persistant)
-│   └── execution.py     # Exécution testnet Binance (argent fictif, garde-fous)
+│   ├── execution.py     # Exécution Binance (simulation / testnet / réel)
+│   └── trading_guard.py # Garde-fous trading réel (limites + coupe-circuit)
 ├── utils/
 │   ├── config.py        # Paramètres centraux
 │   ├── logger.py        # Journalisation
