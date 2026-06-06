@@ -51,9 +51,14 @@ des boutons primaires est `--bg` (sombre) sur indigo, pour rester lisible.
 - **Sidebar** : surface plus claire que le contenu, bordure droite.
 - **Hero (accueil)** : grand titre `clamp()` (max ~3.2rem) avec un mot en accent
   indigo, sous-titre `--muted` ≤ 60ch, rangée de *chips* (pastille verte + label).
-- **Marché en direct** : grille de tuiles `auto-fit minmax(160px)` ; chaque tuile =
-  symbole, prix tabulaire, variation 24 h (flèche ▲/▼ + signe, doublée pour le
-  daltonisme) et **sparkline SVG** (ligne + aire, couleur sémantique gain/perte).
+- **Marché en direct** (`market_grid`) : grille de tuiles `auto-fit minmax(160px)` ;
+  chaque tuile = symbole, prix tabulaire, variation (flèche ▲/▼ + signe, doublée
+  pour le daltonisme), **sparkline SVG** (ligne + aire, couleur sémantique
+  gain/perte) et, en option, des **badges** (RSI, tendance, signal achat/vente).
+  Tuile **cliquable** = lien `/?symbol=…` → ouvre l'analyse de l'actif (lien profond
+  géré par l'accueil via `st.query_params`). Indicateur **« en direct »** : pastille
+  verte qui pulse (`ta-ping`) sur les titres de section — traduit un état réel
+  (données live), pas de la décoration (cf. anti-référence « chiffres clignotants »).
 - **Cartes de navigation** : liens `.ta-card` (icône + titre + description +
   « Ouvrir → »), hover lift + ombre indigo ; rythme varié (3 cartes phares puis
   pastilles compactes) pour éviter la grille de cartes identiques.
@@ -81,5 +86,8 @@ transparaître.
   par `utils/ui.py` selon le thème courant.
 - Système d'UI partagé : `utils/ui.py` — `start_page()` (config + bascule de thème +
   CSS), `page_header()`, `callout()`, et les composants d'accueil `hero()`,
-  `section()`, `market_pulse()`, `sparkline_svg()`, `feature_cards()`, `pill_links()`.
-  Importé en tête de chaque page.
+  `section(live=…)`, `market_grid(link=…)` (+ `market_pulse` legacy), `sparkline_svg()`,
+  `feature_cards()`, `pill_links()`. Importé en tête de chaque page.
+- Lien profond : les tuiles pointent vers `/?symbol=BTC/USDT` ; `dashboard.py` lit
+  `st.query_params["symbol"]`, présélectionne l'actif (clé `ta_actif`) et lance
+  l'analyse automatiquement.

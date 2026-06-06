@@ -23,7 +23,7 @@ from core.market_data import fetch_ohlcv
 from core.strategy import AVAILABLE_STRATEGIES, RsiSmaStrategy, get_strategy
 from utils import notifications
 from utils.config import Config, default_config
-from utils.ui import (callout, feature_cards, hero, market_pulse, page_header,
+from utils.ui import (callout, feature_cards, hero, market_grid, page_header,
                       pill_links, section, start_page)
 
 C = start_page("Analyse", icon="📈")
@@ -32,12 +32,20 @@ cfg = default_config
 PAIRES = ["BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT", "ADA/USDT",
           "DOGE/USDT", "AVAX/USDT", "LINK/USDT", "DOT/USDT", "LTC/USDT", "TRX/USDT"]
 
+# Lien profond : une tuile cliquée ailleurs (?symbol=BTC/USDT) ouvre l'analyse.
+_demande = st.query_params.get("symbol")
+if _demande and not st.session_state.get("_drill_done"):
+    st.session_state["_drill_done"] = True
+    if _demande in PAIRES:
+        st.session_state["ta_actif"] = _demande
+    st.session_state["analyse_demandee"] = True
+
 # -----------------------------------------------------------------------------
 # Panneau de contrôle (sidebar)
 # -----------------------------------------------------------------------------
 with st.sidebar:
     st.header("Paramètres")
-    choix = st.selectbox("Actif", PAIRES + ["Autre…"])
+    choix = st.selectbox("Actif", PAIRES + ["Autre…"], key="ta_actif")
     symbol = st.text_input("Symbole personnalisé", value="BTC/USDT") if choix == "Autre…" else choix
     timeframe = st.selectbox("Intervalle", ["15m", "30m", "1h", "4h", "1d", "1w"], index=4)
     limit = st.slider("Nombre de bougies", 100, 1000, cfg.limit, step=50)
@@ -326,10 +334,10 @@ else:
         chips=["Données réelles", "Sans argent réel", "100 % pédagogique", "Open source"],
     )
 
-    section("Le marché en direct", "Variation sur 24 h · source Binance")
+    section("Le marché en direct", "24 h · clique pour analyser", live=True)
     pouls = pouls_marche(("BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT",
                           "XRP/USDT", "DOGE/USDT"))
-    market_pulse(pouls, C)
+    market_grid(pouls, C, link=True)
 
     section("Par où commencer ?")
     feature_cards([

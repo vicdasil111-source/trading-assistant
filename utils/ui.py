@@ -11,6 +11,7 @@ pour colorer les graphes Plotly).
 from __future__ import annotations
 
 import os
+from urllib.parse import quote as _urlquote
 
 import streamlit as st
 
@@ -242,9 +243,9 @@ _STATIC_CSS = """
   animation: ta-rise 460ms var(--ease) both;
 }
 .ta-tile:hover { border-color: color-mix(in oklab, var(--primary) 55%, var(--border)); transform: translateY(-2px); }
-.ta-tile__head { display: flex; align-items: center; justify-content: space-between; }
-.ta-tile__sym { font-weight: 650; font-size: 0.95rem; color: var(--ink); letter-spacing: -0.01em; }
-.ta-tile__chg { font-size: 0.8rem; font-weight: 650; font-variant-numeric: tabular-nums; }
+.ta-tile__head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.ta-tile__sym { font-weight: 650; font-size: 0.98rem; color: var(--ink); letter-spacing: -0.01em; }
+.ta-tile__chg { font-size: 0.8rem; font-weight: 650; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .ta-up { color: var(--gain); }
 .ta-down { color: var(--loss); }
 .ta-flat { color: var(--muted); }
@@ -277,9 +278,32 @@ _STATIC_CSS = """
 .ta-pill:hover { border-color: var(--primary); transform: translateY(-1px); }
 .ta-pill__ic { font-size: 0.98rem; }
 
+/* ---------- Tuiles cliquables + badges (page Marché) ---------- */
+a.ta-tile { text-decoration: none !important; color: inherit; display: block; cursor: pointer; }
+.ta-tile__pair { color: var(--muted); font-weight: 500; font-size: 0.82rem; }
+.ta-tile__foot { display: flex; flex-wrap: wrap; gap: 0.35rem; margin-top: 0.55rem; }
+.ta-badge { font-size: 0.72rem; font-weight: 600; color: var(--muted);
+  background: color-mix(in oklab, var(--muted) 12%, transparent);
+  border: 1px solid var(--border); border-radius: 999px; padding: 0.16rem 0.5rem;
+  font-variant-numeric: tabular-nums; }
+.ta-badge--buy { color: var(--gain); border-color: color-mix(in oklab, var(--gain) 40%, var(--border));
+  background: color-mix(in oklab, var(--gain) 14%, transparent); }
+.ta-badge--sell { color: var(--loss); border-color: color-mix(in oklab, var(--loss) 40%, var(--border));
+  background: color-mix(in oklab, var(--loss) 14%, transparent); }
+
+/* ---------- Indicateur « en direct » (traduit un état : données live) ---------- */
+.ta-live { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--muted); }
+.ta-live__dot { width: 8px; height: 8px; border-radius: 999px; background: var(--gain);
+  animation: ta-ping 2.1s var(--ease) infinite; }
+@keyframes ta-ping {
+  0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--gain) 55%, transparent); }
+  70%  { box-shadow: 0 0 0 7px color-mix(in oklab, var(--gain) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--gain) 0%, transparent); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stApp { background-attachment: scroll; }
-  .ta-tile, .ta-card, .ta-pill { animation: none !important; transition: none !important; }
+  .ta-tile, .ta-card, .ta-pill, .ta-live__dot { animation: none !important; transition: none !important; }
   .ta-tile:hover, .ta-card:hover, .ta-pill:hover { transform: none !important; }
 }
 </style>
@@ -376,9 +400,15 @@ def hero(title_html: str, subtitle: str = "", chips: list[str] | None = None) ->
     )
 
 
-def section(title: str, note: str = "") -> None:
-    """Titre de section avec note alignée à droite (optionnelle)."""
-    note_html = f'<div class="ta-sec__note">{note}</div>' if note else ""
+def section(title: str, note: str = "", live: bool = False) -> None:
+    """Titre de section avec note alignée à droite (optionnelle).
+
+    `live=True` ajoute une pastille verte qui pulse (= données en direct, traduit
+    un état réel — pas de la décoration)."""
+    inner = note
+    if live:
+        inner = f'<span class="ta-live"><span class="ta-live__dot"></span>{note or "en direct"}</span>'
+    note_html = f'<div class="ta-sec__note">{inner}</div>' if inner else ""
     st.markdown(
         f'<div class="ta-sec"><div class="ta-sec__title">{title}</div>{note_html}</div>',
         unsafe_allow_html=True,
@@ -422,7 +452,56 @@ def sparkline_svg(values, color: str, width: int = 140, height: int = 38) -> str
     )
 
 
-def market_pulse(items: list[dict], palette: dict) -> None:
+def market_grid(items: list[dict], palette: dict, link: bool = True) -> None:
+    """Grille de tuiles marche. Chaque item : {symbol, price, chg, spark} et,
+    en option, {rsi, trend, signal} pour la rangee de badges du bas.
+
+    link=True -> chaque tuile est un lien vers l'analyse de l'actif (/?symbol=...),
+    traite par la page d'accueil.
+    """
+    if not items:
+        callout("Marche momentanement indisponible, reessaie dans un instant.", tone="warn")
+        return
+    tiles = []
+    for it in items:
+        chg = it["chg"]
+        if chg > 0.05:
+            cls, arrow, color = "ta-up", "▲", palette["gain"]
+        elif chg < -0.05:
+            cls, arrow, color = "ta-down", "▼", palette["loss"]
+        else:
+            cls, arrow, color = "ta-flat", "▪", palette["muted"]
+        base = it["symbol"].split("/")[0]
+
+        foot = []
+        rsi = it.get("rsi")
+        if rsi is not None and rsi == rsi:  # exclut NaN
+            foot.append(f'<span class="ta-badge">RSI {rsi:.0f}</span>')
+        if it.get("trend"):
+            foot.append(f'<span class="ta-badge">{it["trend"]}</span>')
+        sig = it.get("signal")
+        if sig == 1:
+            foot.append('<span class="ta-badge ta-badge--buy">● Achat</span>')
+        elif sig == -1:
+            foot.append('<span class="ta-badge ta-badge--sell">● Vente</span>')
+        foot_html = f'<div class="ta-tile__foot">{"".join(foot)}</div>' if foot else ""
+
+        inner = (
+            f'<div class="ta-tile__head"><span class="ta-tile__sym">{base}</span>'
+            f'<span class="ta-tile__chg {cls}">{arrow} {abs(chg):.2f} %</span></div>'
+            f'<div class="ta-tile__price">{_fmt_price(it["price"])}'
+            f'<span class="ta-tile__unit">USDT</span></div>'
+            f'{sparkline_svg(it["spark"], color)}{foot_html}'
+        )
+        if link:
+            href = "/?symbol=" + _urlquote(it["symbol"], safe="")
+            tiles.append(f'<a class="ta-tile" href="{href}" target="_self">{inner}</a>')
+        else:
+            tiles.append(f'<div class="ta-tile">{inner}</div>')
+    st.markdown(f'<div class="ta-pulse">{"".join(tiles)}</div>', unsafe_allow_html=True)
+
+
+def market_pulse(items: list[dict], palette: dict) -> None:  # legacy, voir market_grid
     """Grille de tuiles « prix + variation + sparkline ».
 
     Chaque item : {symbol, price, chg, spark(list[float])}.
