@@ -16,7 +16,9 @@ permet de les **tester** par backtesting et paper trading.
 - 📥 **Données de marché** crypto via [`ccxt`](https://github.com/ccxt/ccxt) (Binance, données publiques), avec cache local.
 - 📊 **Indicateurs** : RSI, SMA, EMA, MACD, Bollinger, **ATR**, **Stochastique**, **OBV**, tendance.
 - 🎛️ **Panneau d'options** : choix d'actif, intervalle, indicateurs réglables, affichage modulable.
-- 🌙☀️ **Thème clair / sombre** (bascule instantanée), sous-graphes RSI/MACD/Stochastique, volume.
+- 🌙☀️🖥️ **3 thèmes** (Calme / Clair / **Terminal** néon) à bascule instantanée, sous-graphes RSI/MACD/Stoch.
+- 🔒 **Sécurité comptes** : mots de passe hachés (min. 8, rejet des trop courants), limitation des
+  tentatives de connexion, expiration de session.
 - ⬇️ **Exports CSV** (données + indicateurs, trades du backtest) et **glossaire** intégré.
 - 👤 **Comptes utilisateurs** (inscription / connexion, mots de passe **hachés** PBKDF2, session
   persistante par jeton) avec **watchlist** et préférences par utilisateur.
@@ -108,6 +110,8 @@ Un site **multi-pages** s'ouvre dans le navigateur, avec dans la barre latérale
 | 📊 **Comparateur** | Performances de plusieurs actifs sur une même base 100 |
 | 💼 **Portefeuille** | Suivi manuel de tes positions, valeur et P&L en direct — nécessite un compte |
 | 🔔 **Alertes** | Conditions prix / RSI par actif, état déclenché en direct — nécessite un compte |
+| 🛰️ **Marché** | Top mouvements des actifs populaires, RSI, signaux et mini-sparklines |
+| 🤝 **Trading testnet** | Ordres et auto-trade sur signal en **simulation / testnet** (argent fictif) |
 
 ### Pilote automatique en boucle (CLI)
 

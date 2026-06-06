@@ -14,10 +14,15 @@ La session survit donc au changement de page et au rafraîchissement.
 
 from __future__ import annotations
 
+import time
+
 import streamlit as st
 
 from core import accounts
 from utils.ui import callout
+
+_MAX_FAILS = 5          # tentatives avant verrouillage
+_COOLDOWN = 60          # secondes de verrouillage
 
 
 def current_user() -> str | None:
@@ -79,22 +84,41 @@ def require_login(feature: str = "cette page") -> str:
 
 
 def login_form() -> None:
-    """Formulaire de connexion."""
+    """Formulaire de connexion, avec limitation anti-force-brute."""
+    locked_until = st.session_state.get("login_locked_until", 0.0)
+    reste = int(locked_until - time.time())
+    if reste > 0:
+        st.error(f"Trop de tentatives. Réessaie dans {reste} s.")
+        return
+
     with st.form("login_form"):
         u = st.text_input("Identifiant")
         p = st.text_input("Mot de passe", type="password")
         ok = st.form_submit_button("Se connecter", type="primary", use_container_width=True)
-    if ok:
-        try:
-            valide = accounts.authenticate(u, p)
-        except Exception:
-            st.error("Le service de comptes est momentanément indisponible. Réessaie.")
-            return
-        if valide:
-            do_login(u.strip())
-            st.rerun()
-        else:
-            st.error("Identifiant ou mot de passe incorrect.")
+    if not ok:
+        return
+
+    try:
+        valide = accounts.authenticate(u, p)
+    except Exception:
+        st.error("Le service de comptes est momentanément indisponible. Réessaie.")
+        return
+
+    if valide:
+        st.session_state["login_fails"] = 0
+        do_login(u.strip())
+        st.rerun()
+        return
+
+    fails = st.session_state.get("login_fails", 0) + 1
+    st.session_state["login_fails"] = fails
+    if fails >= _MAX_FAILS:
+        st.session_state["login_locked_until"] = time.time() + _COOLDOWN
+        st.session_state["login_fails"] = 0
+        st.error(f"Trop de tentatives. Connexion verrouillée {_COOLDOWN} s.")
+    else:
+        st.error(f"Identifiant ou mot de passe incorrect. "
+                 f"({_MAX_FAILS - fails} essai(s) restant(s))")
 
 
 def signup_form() -> None:
@@ -102,7 +126,7 @@ def signup_form() -> None:
     with st.form("signup_form"):
         u = st.text_input("Choisis un identifiant (min. 3 caractères)")
         e = st.text_input("E-mail (facultatif)")
-        p1 = st.text_input("Mot de passe (min. 6 caractères)", type="password")
+        p1 = st.text_input("Mot de passe (min. 8 caractères)", type="password")
         p2 = st.text_input("Confirme le mot de passe", type="password")
         ok = st.form_submit_button("Créer mon compte", type="primary", use_container_width=True)
     if ok:

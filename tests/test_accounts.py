@@ -61,6 +61,31 @@ def test_preferences(db):
     assert accounts.get_pref("frank", "theme", path=db) == "light"
 
 
+def test_mot_de_passe_trop_court(db):
+    with pytest.raises(ValueError):
+        accounts.create_user("kev", "court12", path=db)   # 7 caractères
+
+
+def test_mot_de_passe_trop_courant(db):
+    with pytest.raises(ValueError):
+        accounts.create_user("lea", "password", path=db)
+    with pytest.raises(ValueError):
+        accounts.create_user("leo", "12345678", path=db)
+
+
+def test_session_expiree_invalide(db, monkeypatch):
+    import sqlite3
+
+    accounts.create_user("mira", "azerty12", path=db)
+    token = accounts.create_session("mira", path=db)
+    assert accounts.session_user(token, path=db) == "mira"
+    # On vieillit artificiellement la session de 40 jours.
+    with sqlite3.connect(db) as conn:
+        conn.execute("UPDATE sessions SET created_at = ? WHERE token = ?",
+                     ("2000-01-01T00:00:00+00:00", token))
+    assert accounts.session_user(token, path=db) is None
+
+
 def test_sessions_persistantes(db):
     accounts.create_user("gaia", "azerty12", path=db)
     token = accounts.create_session("gaia", path=db)

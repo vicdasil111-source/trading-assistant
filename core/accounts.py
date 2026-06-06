@@ -23,7 +23,7 @@ import os
 import re
 import secrets
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from core import supabase_store as sb
@@ -31,6 +31,11 @@ from utils.config import DATA_DIR
 
 _ITERATIONS = 200_000
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_SESSION_TTL_DAYS = 30
+_COMMON_PASSWORDS = {
+    "password", "12345678", "123456789", "azertyui", "qwertyui", "motdepasse",
+    "00000000", "11111111", "abc12345", "iloveyou", "password1", "12341234",
+}
 
 
 def _use_supabase(path: Path | None) -> bool:
@@ -117,8 +122,10 @@ def create_user(username: str, password: str, email: str = "",
     username = (username or "").strip()
     if len(username) < 3:
         raise ValueError("Le nom d'utilisateur doit faire au moins 3 caractères.")
-    if len(password) < 6:
-        raise ValueError("Le mot de passe doit faire au moins 6 caractères.")
+    if len(password) < 8:
+        raise ValueError("Le mot de passe doit faire au moins 8 caractères.")
+    if password.lower() in _COMMON_PASSWORDS:
+        raise ValueError("Ce mot de passe est trop courant. Choisis-en un autre.")
     if email and not _EMAIL_RE.match(email):
         raise ValueError("Adresse e-mail invalide.")
 
@@ -194,17 +201,33 @@ def create_session(username: str, path: Path | None = None) -> str:
     return token
 
 
+def _session_expired(created_at: str) -> bool:
+    """True si la session a dépassé sa durée de vie (sécurité)."""
+    try:
+        created = datetime.fromisoformat(created_at)
+    except (ValueError, TypeError):
+        return False  # date illisible : on ne bloque pas pour autant
+    if created.tzinfo is None:
+        created = created.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - created > timedelta(days=_SESSION_TTL_DAYS)
+
+
 def session_user(token: str, path: Path | None = None) -> str | None:
-    """Renvoie l'utilisateur associé à un jeton, ou None s'il est invalide."""
+    """Renvoie l'utilisateur d'un jeton valide et non expiré, sinon None."""
     if not token:
         return None
     if _use_supabase(path):
-        rows = sb.select("sessions", {"token": f"eq.{token}"}, "username")
-        return rows[0]["username"] if rows else None
+        rows = sb.select("sessions", {"token": f"eq.{token}"}, "username,created_at")
+        if not rows or _session_expired(rows[0].get("created_at", "")):
+            return None
+        return rows[0]["username"]
     init_db(path)
     with _connect(path) as conn:
-        row = conn.execute("SELECT username FROM sessions WHERE token = ?", (token,)).fetchone()
-    return row["username"] if row else None
+        row = conn.execute("SELECT username, created_at FROM sessions WHERE token = ?",
+                           (token,)).fetchone()
+    if row is None or _session_expired(row["created_at"]):
+        return None
+    return row["username"]
 
 
 def delete_session(token: str, path: Path | None = None) -> None:

@@ -28,16 +28,25 @@ def _load_secrets_to_env() -> None:
 # Palettes (alignées sur DESIGN.md). Hex calculés depuis de l'OKLCH.
 DARK = {
     "bg": "#0f0f13", "surface": "#18191f", "border": "#31323a",
-    "ink": "#f1f1f4", "muted": "#a9aab2", "primary": "#787cf0",
+    "ink": "#f1f1f4", "muted": "#a9aab2", "primary": "#787cf0", "on_primary": "#ffffff",
     "gain": "#51c672", "loss": "#f14d4c", "warn": "#edb345",
     "plotly": "plotly_dark", "grid": "#31323a", "bb_fill": "rgba(169,170,178,0.07)",
 }
 LIGHT = {
     "bg": "#ffffff", "surface": "#f6f6f9", "border": "#dddde3",
-    "ink": "#242630", "muted": "#60626f", "primary": "#5755cd",
+    "ink": "#242630", "muted": "#60626f", "primary": "#5755cd", "on_primary": "#ffffff",
     "gain": "#0e8c41", "loss": "#c9222b", "warn": "#9f7100",
     "plotly": "plotly_white", "grid": "#dddde3", "bb_fill": "rgba(96,98,111,0.08)",
 }
+# Thème « Terminal » néon, inspiré des terminaux on-chain (Axiom / Photon).
+TERMINAL = {
+    "bg": "#07090c", "surface": "#0f141a", "border": "#1f2a33",
+    "ink": "#e8f1f2", "muted": "#8a97a1", "primary": "#22d3ee", "on_primary": "#04181c",
+    "gain": "#34e29b", "loss": "#ff5470", "warn": "#ffd24d",
+    "plotly": "plotly_dark", "grid": "#1f2a33", "bb_fill": "rgba(138,151,161,0.07)",
+}
+
+THEMES = {"dark": DARK, "light": LIGHT, "terminal": TERMINAL}
 
 # Conservé pour compatibilité (anciens imports) : palette sombre par défaut.
 COLORS = DARK
@@ -48,7 +57,7 @@ def current_theme() -> str:
 
 
 def current_colors() -> dict:
-    return LIGHT if current_theme() == "light" else DARK
+    return THEMES.get(current_theme(), DARK)
 
 
 def _css(p: dict) -> str:
@@ -59,6 +68,7 @@ def _css(p: dict) -> str:
 :root {{
   --bg: {p['bg']}; --surface: {p['surface']}; --border: {p['border']};
   --ink: {p['ink']}; --muted: {p['muted']}; --primary: {p['primary']};
+  --on-primary: {p['on_primary']};
   --gain: {p['gain']}; --loss: {p['loss']}; --warn: {p['warn']};
   --radius: 0.6rem;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -144,8 +154,8 @@ pre, code, [data-testid="stCode"] {{ background: var(--surface) !important; colo
 /* Boutons : primaire indigo, états complets. */
 .stButton > button {{ border-radius: var(--radius); font-weight: 600;
   transition: transform 160ms var(--ease), box-shadow 160ms var(--ease), border-color 160ms var(--ease); }}
-[data-testid="stBaseButton-primary"] {{ background: var(--primary); color: #ffffff; border: 1px solid var(--primary); }}
-[data-testid="stBaseButton-primary"]:hover {{ transform: translateY(-1px); box-shadow: 0 6px 18px -6px var(--primary); filter: brightness(1.06); }}
+[data-testid="stBaseButton-primary"] {{ background: var(--primary); color: var(--on-primary); border: 1px solid var(--primary); }}
+[data-testid="stBaseButton-primary"]:hover {{ transform: translateY(-1px); box-shadow: 0 6px 22px -6px var(--primary); filter: brightness(1.08); }}
 [data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-secondaryFormSubmit"] {{ background: var(--surface); color: var(--ink); border: 1px solid var(--border); }}
 [data-testid="stBaseButton-secondary"]:hover {{ border-color: var(--primary); }}
 .stDownloadButton > button {{ background: var(--surface); color: var(--ink); border: 1px solid var(--border); border-radius: var(--radius); font-weight: 600; }}
@@ -185,11 +195,12 @@ def init_page(title: str, icon: str = "📈", layout: str = "wide") -> None:
 
 def _theme_toggle() -> None:
     """Bascule de thème dans la sidebar. Doit être appelée avant inject_theme()."""
+    labels = {"dark": "🌙 Calme", "light": "☀️ Clair", "terminal": "🖥️ Terminal"}
     with st.sidebar:
         st.radio(
             "Apparence",
-            options=["dark", "light"],
-            format_func=lambda v: "🌙 Sombre" if v == "dark" else "☀️ Clair",
+            options=["dark", "light", "terminal"],
+            format_func=lambda v: labels[v],
             horizontal=True,
             key="theme",
         )
