@@ -336,13 +336,38 @@ a.ta-tile { text-decoration: none !important; color: inherit; display: block; cu
 
 /* ---------- Actualités (journaux en direct) ---------- */
 .ta-news { display: grid; gap: 0.6rem; }
-.ta-news-item { display: block; text-decoration: none !important; background: var(--surface);
+.ta-news-item { display: block; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius); padding: 0.85rem 1rem;
   transition: border-color 160ms var(--ease), transform 160ms var(--ease); }
 .ta-news-item:hover { border-color: color-mix(in oklab, var(--primary) 55%, var(--border));
   transform: translateY(-2px); }
-.ta-news-title { color: var(--ink) !important; font-weight: 600; font-size: 0.98rem; line-height: 1.35; }
-.ta-news-meta { color: var(--muted); font-size: 0.8rem; margin-top: 0.3rem; }
+a.ta-news-title { display: block; text-decoration: none !important; color: var(--ink) !important;
+  font-weight: 600; font-size: 0.98rem; line-height: 1.35; }
+a.ta-news-title:hover { color: var(--primary) !important; }
+.ta-news-foot { display: flex; align-items: center; justify-content: space-between;
+  gap: 0.6rem; flex-wrap: wrap; margin-top: 0.45rem; }
+.ta-news-meta { color: var(--muted); font-size: 0.8rem; }
+.ta-news-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.ta-news-tag { text-decoration: none !important; font-size: 0.72rem; font-weight: 650;
+  color: var(--primary) !important; background: color-mix(in oklab, var(--primary) 12%, transparent);
+  border: 1px solid color-mix(in oklab, var(--primary) 30%, var(--border));
+  border-radius: 999px; padding: 0.1rem 0.45rem; }
+.ta-news-tag:hover { background: color-mix(in oklab, var(--primary) 22%, transparent); }
+
+/* ---------- Sentiment (Fear & Greed) ---------- */
+.ta-fng { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1rem 1.1rem; max-width: 520px; }
+.ta-fng__top { display: flex; align-items: baseline; justify-content: space-between; gap: 0.6rem; }
+.ta-fng__val { font-size: 1.9rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ta-fng__max { font-size: 0.9rem; font-weight: 500; color: var(--muted); }
+.ta-fng__label { font-size: 0.95rem; font-weight: 650; color: var(--ink); }
+.ta-fng__bar { position: relative; height: 8px; border-radius: 999px; margin: 0.7rem 0 0.35rem;
+  background: linear-gradient(90deg, var(--loss), var(--warn), var(--gain)); }
+.ta-fng__marker { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 999px;
+  background: var(--ink); border: 2px solid var(--bg); transform: translate(-50%, -50%);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+.ta-fng__scale { display: flex; justify-content: space-between; font-size: 0.72rem; color: var(--muted); }
+.ta-fng__note { font-size: 0.76rem; color: var(--muted); margin-top: 0.5rem; }
 
 @media (prefers-reduced-motion: reduce) {
   .stApp { background-attachment: scroll; }
@@ -667,8 +692,8 @@ def pill_links(items: list[dict]) -> None:
 
 
 def news_cards(items: list[dict]) -> None:
-    """Liste d'actualités (titre cliquable + source/date). Échappe le HTML car
-    le contenu vient de flux externes."""
+    """Liste d'actualités : titre cliquable (article) + source/date + pastilles
+    des actifs mentionnés (lien vers l'analyse). HTML échappé (contenu externe)."""
     if not items:
         callout("Actualités indisponibles pour le moment — réessaie plus tard.", tone="warn")
         return
@@ -678,9 +703,37 @@ def news_cards(items: list[dict]) -> None:
         link = _html.escape(it.get("link", "#"), quote=True)
         meta = " · ".join(x for x in (it.get("source", ""), it.get("date", "")) if x)
         meta = _html.escape(meta)
+        tags = ""
+        assets = it.get("assets") or []
+        if assets:
+            chips = "".join(
+                f'<a class="ta-news-tag" href="/?symbol={_urlquote(sym, safe="")}" '
+                f'target="_self">{_html.escape(sym.split("/")[0])}</a>'
+                for sym in assets)
+            tags = f'<span class="ta-news-tags">{chips}</span>'
         cards.append(
-            f'<a class="ta-news-item" href="{link}" target="_blank" rel="noopener noreferrer">'
-            f'<div class="ta-news-title">{title}</div>'
-            f'<div class="ta-news-meta">{meta}</div></a>'
+            f'<div class="ta-news-item">'
+            f'<a class="ta-news-title" href="{link}" target="_blank" rel="noopener noreferrer">{title}</a>'
+            f'<div class="ta-news-foot"><span class="ta-news-meta">{meta}</span>{tags}</div>'
+            f'</div>'
         )
     st.markdown(f'<div class="ta-news">{"".join(cards)}</div>', unsafe_allow_html=True)
+
+
+def sentiment_card(fng: dict | None) -> None:
+    """Jauge « Fear & Greed » (sentiment du marché). Silencieux si indisponible."""
+    if not fng:
+        return
+    val = max(0, min(100, int(fng.get("value", 0))))
+    label = _html.escape(fng.get("label_fr") or fng.get("label", ""))
+    st.markdown(
+        f'<div class="ta-fng">'
+        f'<div class="ta-fng__top">'
+        f'<span class="ta-fng__val">{val}<span class="ta-fng__max">/100</span></span>'
+        f'<span class="ta-fng__label">{label}</span></div>'
+        f'<div class="ta-fng__bar"><span class="ta-fng__marker" style="left:{val}%"></span></div>'
+        f'<div class="ta-fng__scale"><span>Peur</span><span>Neutre</span><span>Avidité</span></div>'
+        f'<div class="ta-fng__note">Indice Fear &amp; Greed — humeur du marché, '
+        f'pas un signal d\'achat.</div></div>',
+        unsafe_allow_html=True,
+    )

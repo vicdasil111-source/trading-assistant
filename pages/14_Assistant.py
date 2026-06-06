@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import streamlit as st
 
-from core import assistant, news
+from core import assistant, llm, news, sentiment
 from core.market_data import fetch_ohlcv
 from utils.ui import callout, page_header, start_page
 
@@ -43,13 +43,24 @@ def _live_news() -> list[dict]:
     return news.latest_news(6)
 
 
+@st.cache_data(ttl=1800, show_spinner=False)
+def _live_sentiment() -> dict | None:
+    return sentiment.fear_greed()
+
+
 def ask(question: str) -> None:
     question = (question or "").strip()
     if not question:
         return
     st.session_state["chat"].append({"role": "user", "content": question})
-    reply = assistant.respond(question, price_fn=_live_price, news_fn=_live_news)
+    reply = assistant.respond(
+        question, price_fn=_live_price, news_fn=_live_news,
+        sentiment_fn=_live_sentiment, llm_fn=llm.ask)
     st.session_state["chat"].append({"role": "assistant", "content": reply})
+
+
+if llm.available():
+    st.caption("🤖 Mode IA avancée actif (clé détectée) : questions libres comprises.")
 
 
 # Question envoyée depuis la barre de l'accueil (st.switch_page + session).

@@ -113,3 +113,10 @@ transparaître.
   `showSidebarNavigation=false`) ; `utils/ui.sidebar_nav()` affiche des groupes
   (Découvrir / Automatiser / Outils / Mon espace / Trading / Aide) en `st.page_link`,
   avec en-têtes de groupe et surbrillance de la page active.
+- **Sentiment** (`core/sentiment.py`, `ui.sentiment_card`) : jauge Fear & Greed
+  (barre dégradée rouge→ambre→vert + curseur, libellé doublé, note « pas un signal »).
+- **Actualités reliées aux actifs** : `assistant.detect_assets()` taggue chaque
+  titre ; `news_cards` rend des pastilles cliquables vers `/?symbol=…`.
+- **LLM optionnel** (`core/llm.py`) : si `ANTHROPIC_API_KEY`/`OPENAI_API_KEY` présent,
+  `assistant.respond(..., llm_fn=)` délègue les questions inconnues ; sinon moteur
+  local. Échec silencieux → repli local (jamais de plantage, jamais de conseil).

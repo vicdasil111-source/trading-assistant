@@ -45,16 +45,28 @@ def parse_rss(xml_bytes: bytes, source_default: str = "") -> list[dict]:
     return items
 
 
-def latest_news(limit: int = 12) -> list[dict]:
-    """Renvoie les derniers articles (en essayant les flux dans l'ordre).
+def _enrich_assets(items: list[dict]) -> None:
+    """Ajoute item['assets'] = symboles détectés dans le titre (import local pour
+    éviter tout couplage à l'import)."""
+    try:
+        from core.assistant import detect_assets
+    except Exception:
+        return
+    for it in items:
+        it["assets"] = detect_assets(it.get("title", ""))
 
-    Liste vide si tout échoue (réseau coupé / flux indisponibles)."""
+
+def latest_news(limit: int = 12) -> list[dict]:
+    """Renvoie les derniers articles (en essayant les flux dans l'ordre), chacun
+    enrichi des actifs mentionnés. Liste vide si tout échoue."""
     for source_default, url in FEEDS:
         try:
             data = _fetch_url(url)
             items = parse_rss(data, source_default)
             if items:
-                return items[:limit]
+                items = items[:limit]
+                _enrich_assets(items)
+                return items
         except Exception:
             continue
     return []

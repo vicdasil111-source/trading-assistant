@@ -45,9 +45,12 @@ permet de les **tester** par backtesting et paper trading.
 - ❓ **Aide & FAQ** intégrée : risques, **cadre légal (AMF / MiCA)**, **fiscalité**,
   protection des clés API et **RGPD**.
 - 💬 **Assistant pédagogique** : une **barre de questions** qui explique indicateurs,
-  stratégies, risque et légal — **sans conseil**, 100 % local (aucune API). Il connaît
-  aussi le **prix en direct** et les **dernières actualités** (accès internet).
-- 📰 **Actualités en direct** : titres de la presse crypto (flux RSS agrégés).
+  stratégies, risque et légal — **sans conseil**, 100 % local par défaut. Il connaît
+  le **prix en direct**, les **actualités** et le **sentiment du marché** (accès
+  internet). **LLM optionnel** (Claude / OpenAI) si tu fournis une clé.
+- 🧭 **Sentiment du marché** : indice **Fear & Greed** (Peur & Avidité) sur l'accueil.
+- 📰 **Actualités en direct** : titres de la presse crypto (flux RSS agrégés), chaque
+  article **relié à l'actif** qu'il mentionne (vers son analyse).
 - 🖥️ **Site multi-pages Streamlit** à **navigation par sections** (graphe en
   **chandelles**) + **CLI**, marché chargé **en parallèle** (rapide).
 

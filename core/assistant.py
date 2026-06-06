@@ -192,10 +192,10 @@ _FALLBACK = (
 SUGGESTIONS: tuple[str, ...] = (
     "Prix du Bitcoin ?",
     "Les dernières actus crypto ?",
+    "Le marché a-t-il peur ?",
     "C'est quoi le RSI ?",
     "Comment activer le trading réel ?",
     "Dois-je acheter du Bitcoin ?",
-    "Par où commencer ?",
 )
 
 
@@ -233,6 +233,8 @@ _PRICE_KW = ("prix", "cours", "combien vaut", "combien coute", "valeur de",
 _NEWS_KW = ("news", "actu", "actus", "actualite", "actualites", "nouvelle",
             "nouvelles", "journal", "journaux", "quoi de neuf", "se passe",
             "derniere info", "dernieres infos", "headlines", "infos")
+_SENT_KW = ("fear", "greed", "fear and greed", "peur", "avidite", "sentiment",
+            "fng", "panique", "euphorie")
 
 
 def _find_symbol(question_norm: str) -> str | None:
@@ -242,12 +244,25 @@ def _find_symbol(question_norm: str) -> str | None:
     return None
 
 
+def detect_assets(text: str) -> list[str]:
+    """Symboles mentionnés dans un texte (ex. un titre d'actualité). Dédupliqué,
+    ordre stable. Pur → testable."""
+    qn = _norm(text)
+    found: list[str] = []
+    for name, symbol in COINS.items():
+        if _matches(name, qn) and symbol not in found:
+            found.append(symbol)
+    return found
+
+
 def detect(question: str):
     """Détecte une demande « live ». Renvoie ('price', 'BTC/USDT'),
-    ('news', None) ou (None, None). Pur → testable."""
+    ('news', None), ('sentiment', None) ou (None, None). Pur → testable."""
     qn = _norm(question)
     if any(_matches(k, qn) for k in _NEWS_KW):
         return ("news", None)
+    if any(_matches(k, qn) for k in _SENT_KW):
+        return ("sentiment", None)
     if any(_matches(k, qn) for k in _PRICE_KW):
         sym = _find_symbol(qn)
         if sym:
@@ -255,13 +270,12 @@ def detect(question: str):
     return (None, None)
 
 
-def respond(question: str, *, price_fn=None, news_fn=None) -> str:
-    """Réponse « augmentée » : utilise des données en direct (prix, actualités)
-    quand des fournisseurs sont passés ET que la question s'y prête ; sinon, se
-    rabat sur la base de connaissances statique `answer()`.
-
-    `price_fn(symbol) -> float` et `news_fn() -> list[dict(title, link, source)]`
-    sont injectés par la page (qui gère le réseau) → ce module reste testable.
+def respond(question: str, *, price_fn=None, news_fn=None, sentiment_fn=None,
+            llm_fn=None) -> str:
+    """Réponse « augmentée ». Priorité : données en direct (prix, actualités,
+    sentiment) si la question s'y prête ; sinon base de connaissances locale ;
+    et en dernier recours, si la question est inconnue ET qu'un LLM est branché
+    (`llm_fn`), on lui délègue. Tous les fournisseurs sont injectés → testable.
     """
     kind, arg = detect(question)
 
@@ -287,7 +301,27 @@ def respond(question: str, *, price_fn=None, news_fn=None) -> str:
                     + "\n\nPlus de titres sur la page **Actualités**.\n\n" + DISCLAIMER)
         return "Je n'ai pas réussi à récupérer les actualités en direct là, réessaie plus tard."
 
-    return answer(question)
+    if kind == "sentiment" and sentiment_fn is not None:
+        try:
+            fng = sentiment_fn()
+        except Exception:
+            fng = None
+        if fng:
+            return (f"🧭 Sentiment du marché (indice Fear & Greed) : "
+                    f"**{fng['value']}/100 — {fng.get('label_fr', '')}**. C'est un "
+                    f"thermomètre de l'humeur générale (peur ↔ avidité), pas un "
+                    f"signal d'achat.\n\n" + DISCLAIMER)
+        return "Je n'ai pas pu récupérer le sentiment du marché là, réessaie plus tard."
+
+    static = answer(question)
+    if static == _FALLBACK and llm_fn is not None:
+        try:
+            texte = llm_fn(question)
+        except Exception:
+            texte = None
+        if texte:
+            return texte.strip() + "\n\n" + DISCLAIMER
+    return static
 
 
 def answer(question: str) -> str:

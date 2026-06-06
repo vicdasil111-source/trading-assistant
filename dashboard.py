@@ -17,14 +17,14 @@ from plotly.subplots import make_subplots
 
 import streamlit as st
 
-from core import indicators
+from core import indicators, sentiment
 from core.backtest import backtest
 from core.market_data import fetch_many, fetch_ohlcv
 from core.strategy import AVAILABLE_STRATEGIES, RsiSmaStrategy, get_strategy
 from utils import notifications
 from utils.config import Config, default_config
 from utils.ui import (callout, feature_cards, hero, market_grid_html, page_header,
-                      pill_links, section, skeleton_market, start_page)
+                      pill_links, section, sentiment_card, skeleton_market, start_page)
 
 C = start_page("Analyse", icon="📈")
 
@@ -84,6 +84,12 @@ ucfg = Config(symbol=symbol, timeframe=timeframe, limit=limit, initial_capital=c
 @st.cache_data(show_spinner="Téléchargement des données…")
 def charger_brut(symbol: str, timeframe: str, limit: int) -> pd.DataFrame:
     return fetch_ohlcv(symbol, timeframe, limit=limit)
+
+
+@st.cache_data(ttl=1800, show_spinner=False)
+def sentiment_marche() -> dict | None:
+    """Indice Fear & Greed (sentiment), mis en cache 30 min."""
+    return sentiment.fear_greed()
 
 
 @st.cache_data(ttl=600, show_spinner=False)
@@ -373,6 +379,11 @@ else:
     pouls = pouls_marche(("BTC/USDT", "ETH/USDT", "SOL/USDT", "BNB/USDT",
                           "XRP/USDT", "DOGE/USDT"))
     _ph.markdown(market_grid_html(pouls, C, link=True), unsafe_allow_html=True)
+
+    _fng = sentiment_marche()
+    if _fng:
+        section("Sentiment du marché", "Fear & Greed", live=True)
+        sentiment_card(_fng)
 
     section("Par où commencer ?")
     feature_cards([

@@ -82,3 +82,42 @@ def test_respond_news_en_direct():
 def test_respond_se_rabat_sur_la_base_statique():
     # sans fournisseur live et hors intent live -> réponse statique RSI
     assert "RSI" in assistant.respond("c'est quoi le RSI", price_fn=lambda s: 1.0)
+
+
+# --- Sentiment, détection d'actifs, escalade LLM -----------------------------
+
+def test_detect_assets():
+    found = assistant.detect_assets("Le Bitcoin et l'Ethereum montent, Solana suit")
+    assert found == ["BTC/USDT", "ETH/USDT", "SOL/USDT"]
+
+
+def test_detect_assets_aucun():
+    assert assistant.detect_assets("Une journée calme sur les marchés") == []
+
+
+def test_detect_sentiment():
+    assert assistant.detect("le marché a-t-il peur ?") == ("sentiment", None)
+    assert assistant.detect("fear and greed du jour") == ("sentiment", None)
+
+
+def test_respond_sentiment():
+    rep = assistant.respond("le marché a peur ?",
+                            sentiment_fn=lambda: {"value": 25, "label_fr": "Peur"})
+    assert "25" in rep and "Peur" in rep
+
+
+def test_respond_llm_escalade_sur_question_inconnue():
+    rep = assistant.respond("dissertation hors sujet totalement xyz",
+                            llm_fn=lambda q: "Réponse de l'IA")
+    assert "Réponse de l'IA" in rep
+
+
+def test_respond_llm_pas_appele_si_match_statique():
+    appels = {"n": 0}
+
+    def fake_llm(q):
+        appels["n"] += 1
+        return "IA"
+
+    rep = assistant.respond("c'est quoi le RSI", llm_fn=fake_llm)
+    assert "RSI" in rep and appels["n"] == 0
